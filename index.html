@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Attendance Tracker — SMA Kristen Petra 5</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f7f7f5;--surface:#fff;--border:#e8e8e4;--border-soft:#f0f0ec;
+  --text-primary:#1a1a18;--text-secondary:#6b6b65;--text-muted:#a8a8a2;--accent:#1a1a18;
+  --green:#16a34a;--green-bg:#f0fdf4;--green-border:#bbf7d0;
+  --red:#dc2626;--red-bg:#fef2f2;--red-border:#fecaca;
+  --yellow:#d97706;--yellow-bg:#fffbeb;--yellow-border:#fde68a;
+  --orange:#ea580c;--orange-bg:#fff7ed;--orange-border:#fed7aa;
+  --blue:#3b82f6;--blue-bg:#eff6ff;--blue-border:#bfdbfe;
+  --purple:#7c3aed;--purple-bg:#f5f3ff;--purple-border:#ddd6fe;
+  --radius:10px;--radius-sm:6px;
+  --shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+  --shadow-md:0 4px 16px rgba(0,0,0,.08);
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text-primary);min-height:100vh;font-size:14px;line-height:1.5}
+
+/* NAV */
+.app-nav{background:#1a1a18;padding:0 32px;display:flex;align-items:center;height:36px;font-size:12px}
+.nav-link{color:rgba(255,255,255,.5);text-decoration:none;padding:0 14px;height:36px;display:flex;align-items:center;gap:6px;font-weight:500;transition:color .15s;letter-spacing:.01em;border-right:1px solid rgba(255,255,255,.08)}
+.nav-link:first-child{border-left:1px solid rgba(255,255,255,.08)}
+.nav-link.active{color:white;background:rgba(255,255,255,.07)}
+.nav-link:hover:not(.active){color:rgba(255,255,255,.8)}
+.nav-link svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2}
+.nav-brand{color:rgba(255,255,255,.25);font-size:11px;margin-left:auto;font-family:'DM Mono',monospace;letter-spacing:.04em}
+
+/* HEADER */
+.header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 32px;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:200}
+.header-left{display:flex;align-items:center;gap:12px}
+.logo{width:32px;height:32px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center}
+.logo svg{width:16px;height:16px;stroke:white;fill:none;stroke-width:2}
+.app-title{font-size:15px;font-weight:600;letter-spacing:-.02em}
+.app-subtitle{font-size:11px;color:var(--text-muted)}
+.legend{display:flex;align-items:center;gap:14px;font-size:11px;color:var(--text-secondary)}
+.legend-item{display:flex;align-items:center;gap:5px}
+.legend-dot{width:8px;height:8px;border-radius:2px}
+.ld-hadir{background:#22c55e}.ld-absen{background:#dc2626}.ld-late{background:#f59e0b}.ld-icc{background:#ea580c}
+
+/* LOADING */
+.loading-overlay{position:fixed;inset:0;background:rgba(247,247,245,.88);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:500;flex-direction:column;gap:14px}
+.loading-overlay.show{display:flex}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:13px;font-weight:500;color:var(--text-secondary)}
+
+.main{padding:28px 32px;max-width:1700px;margin:0 auto}
+
+/* UPLOAD */
+.upload-section{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.upload-card{background:var(--surface);border:1.5px dashed var(--border);border-radius:var(--radius);padding:26px 24px;text-align:center;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;display:block}
+.upload-card:hover{border-color:#bbb;background:#fafaf8}
+.upload-card.loaded{border-style:solid;border-color:#22c55e;background:var(--green-bg)}
+.upload-card.dragover{border-color:var(--blue);background:var(--blue-bg)}
+.upload-card input[type=file]{display:none}
+.upload-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;background:var(--bg)}
+.upload-card.loaded .upload-icon{background:var(--green-bg)}
+.upload-icon svg{width:20px;height:20px;stroke:var(--text-secondary);fill:none;stroke-width:1.8}
+.upload-label-text{font-size:13px;font-weight:600;margin-bottom:3px}
+.upload-hint{font-size:11px;color:var(--text-muted)}
+.upload-filename{font-size:11px;font-weight:500;color:var(--green);margin-top:6px;font-family:'DM Mono',monospace;word-break:break-all}
+.upload-badge{position:absolute;top:10px;right:10px;background:#16a34a;color:white;font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;letter-spacing:.04em;text-transform:uppercase}
+.template-link{font-size:11px;color:var(--blue);margin-top:8px;display:inline-block;cursor:pointer;text-decoration:none}
+.template-link:hover{text-decoration:underline}
+
+/* PREVIEW BANNER */
+.preview-banner{background:var(--yellow-bg);border:1px solid var(--yellow-border);border-radius:var(--radius);padding:14px 18px;margin-bottom:20px;display:none;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.preview-banner.show{display:flex}
+.preview-banner-left{display:flex;align-items:center;gap:10px;font-size:13px}
+.preview-banner-left svg{width:16px;height:16px;stroke:var(--yellow);fill:none;stroke-width:2;flex-shrink:0}
+.preview-banner-actions{display:flex;gap:8px}
+
+/* STATS */
+.stats-bar{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:22px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:15px 18px;box-shadow:var(--shadow)}
+.stat-label{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.07em;font-weight:600;margin-bottom:5px}
+.stat-value{font-size:22px;font-weight:600;letter-spacing:-.03em;font-family:'DM Mono',monospace}
+.sv-green{color:#16a34a}.sv-red{color:#dc2626}.sv-yellow{color:#d97706}.sv-orange{color:#ea580c}.sv-blue{color:#3b82f6}
+.stat-sub{font-size:11px;color:var(--text-muted);margin-top:2px}
+
+/* TABS */
+.tabs{display:flex;gap:2px}
+.tab-btn{padding:7px 16px;border-radius:var(--radius-sm);font-size:12px;font-weight:600;cursor:pointer;border:1px solid transparent;transition:all .15s;font-family:inherit;color:var(--text-secondary);background:transparent}
+.tab-btn.active{background:var(--surface);border-color:var(--border);color:var(--text-primary);box-shadow:var(--shadow)}
+.tab-btn:hover:not(.active){color:var(--text-primary)}
+
+/* CONTROLS */
+.controls{display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.search-wrap{position:relative;min-width:190px;max-width:260px}
+.search-wrap svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);width:13px;height:13px;stroke:var(--text-muted);fill:none;stroke-width:2;pointer-events:none}
+.search-input{width:100%;padding:7px 10px 7px 28px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;background:var(--surface);outline:none;transition:border-color .15s}
+.search-input:focus{border-color:#999}
+select.fsel{padding:7px 24px 7px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;background:var(--surface);outline:none;cursor:pointer;color:var(--text-primary);appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23999'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 7px center}
+.controls-right{display:flex;gap:8px;margin-left:auto}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 13px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;cursor:pointer;border:1px solid transparent;transition:all .15s;font-family:inherit;white-space:nowrap}
+.btn svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2}
+.btn-primary{background:var(--accent);color:white}.btn-primary:hover{background:#333}
+.btn-secondary{background:var(--surface);color:var(--text-primary);border-color:var(--border)}.btn-secondary:hover{background:var(--bg)}
+.btn-green{background:#16a34a;color:white}.btn-green:hover{background:#15803d}
+
+/* Period nav */
+.period-nav{display:flex;align-items:center;gap:5px}
+.period-nav-label{font-size:12px;font-weight:600;min-width:130px;text-align:center;font-family:'DM Mono',monospace}
+.mnav-btn{width:26px;height:26px;border-radius:5px;border:1px solid var(--border);background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;padding:0}
+.mnav-btn:hover{background:var(--bg);border-color:#aaa}
+.mnav-btn svg{width:12px;height:12px;stroke:var(--text-secondary);fill:none;stroke-width:2.5}
+.mnav-latest{font-size:11px;padding:4px 9px;border-radius:5px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-family:inherit;color:var(--text-secondary);font-weight:600;transition:all .15s}
+.mnav-latest:hover{background:var(--bg)}
+.controls-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:12px;flex-wrap:wrap}
+
+/* TABLE */
+.table-wrapper{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+.table-scroll{overflow-x:auto;max-height:calc(100vh - 380px);overflow-y:auto}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+thead th{background:#f8f8f6;border-bottom:1px solid var(--border);padding:9px 10px;text-align:left;font-size:10px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;position:sticky;top:0;z-index:20}
+thead th.col-name{min-width:200px;position:sticky;left:0;z-index:30;background:#f8f8f6}
+thead th.num{text-align:center}
+thead th.h-icc{color:var(--orange)}
+thead th.h-totr{color:var(--blue)}
+tbody tr td{padding:8px 10px;border-bottom:1px solid var(--border-soft);vertical-align:middle;transition:background .1s}
+tbody tr:hover td{background:#fafaf9}
+tbody tr.row-icc td{background:#fff7ed}
+tbody tr.row-icc:hover td{background:#ffedd5}
+tbody tr.row-icc td.stickyCol{background:#fff7ed;border-left:3px solid var(--orange)}
+tbody tr.row-icc:hover td.stickyCol{background:#ffedd5}
+tbody tr.row-alert td{background:#fef2f2}
+tbody tr.row-alert:hover td{background:#fee2e2}
+tbody tr.row-alert td.stickyCol{background:#fef2f2;border-left:3px solid var(--red)}
+tbody tr.row-alert:hover td.stickyCol{background:#fee2e2}
+td.stickyCol{position:sticky;left:0;background:white;z-index:5;border-right:1px solid var(--border-soft)}
+tbody tr:hover td.stickyCol{background:#fafaf9}
+.emp-cell{display:flex;flex-direction:column;gap:1px}
+.emp-name{font-size:13px;font-weight:500}
+.emp-id{font-size:10px;color:var(--text-muted);font-family:'DM Mono',monospace}
+.emp-org{font-size:10px;color:var(--text-secondary);font-style:italic}
+td.num{text-align:center}
+.nv{font-family:'DM Mono',monospace;font-size:12px;font-weight:500}
+.nv-green{color:#16a34a}.nv-red{color:#dc2626}.nv-yellow{color:#d97706}
+.nv-orange{color:#ea580c}.nv-blue{color:#3b82f6}.nv-purple{color:#7c3aed}.nv-muted{color:var(--text-muted)}
+
+/* Badges */
+.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600;letter-spacing:.02em}
+.b-green{background:var(--green-bg);color:#16a34a;border:1px solid var(--green-border)}
+.b-red{background:var(--red-bg);color:#dc2626;border:1px solid var(--red-border)}
+.b-yellow{background:var(--yellow-bg);color:#d97706;border:1px solid var(--yellow-border)}
+.b-orange{background:var(--orange-bg);color:#ea580c;border:1px solid var(--orange-border)}
+.b-neutral{background:var(--bg);color:var(--text-muted);border:1px solid var(--border)}
+.icc-chip{display:inline-flex;align-items:center;gap:3px;background:var(--orange-bg);border:1px solid var(--orange-border);color:var(--orange);font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px}
+.ket-chip{display:inline-block;background:#f0f0ec;color:var(--text-secondary);font-size:10px;padding:2px 7px;border-radius:4px;font-family:'DM Mono',monospace;white-space:nowrap}
+
+/* Empty */
+.state-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:64px 32px;text-align:center;color:var(--text-muted)}
+.state-empty svg{width:44px;height:44px;margin-bottom:14px;opacity:.22;stroke:currentColor;fill:none;stroke-width:1.4}
+.state-empty h3{font-size:15px;font-weight:600;color:var(--text-secondary);margin-bottom:6px}
+.state-empty p{font-size:13px;max-width:360px;line-height:1.7}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--accent);color:white;padding:10px 16px;border-radius:8px;font-size:13px;font-weight:500;box-shadow:var(--shadow-md);transform:translateY(100px);opacity:0;transition:all .3s cubic-bezier(.34,1.56,.64,1);z-index:999}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.t-success{background:#16a34a}.toast.t-error{background:#dc2626}
+
+/* Auth */
+.auth-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:8px 32px;display:flex;align-items:center;gap:10px;font-size:12px}
+.auth-dot{width:7px;height:7px;border-radius:50%;background:#dc2626;flex-shrink:0}
+.auth-dot.on{background:#16a34a}
+.auth-label{color:var(--text-secondary);font-weight:500}
+.auth-user{color:var(--text-primary);font-weight:600;font-family:'DM Mono',monospace}
+.auth-role{display:inline-flex;padding:1px 8px;border-radius:10px;font-size:10px;font-weight:600;background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border)}
+.auth-right{margin-left:auto;display:flex;gap:8px}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:600;display:none;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:var(--surface);border-radius:14px;box-shadow:0 8px 48px rgba(0,0,0,.16);width:480px;max-width:92vw;overflow:hidden;animation:popIn .2s cubic-bezier(.34,1.56,.64,1)}
+@keyframes popIn{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}
+.modal-header{padding:18px 22px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:14px;font-weight:600}
+.modal-close{width:26px;height:26px;border-radius:6px;border:1px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.modal-close:hover{background:var(--bg)}
+.modal-close svg{width:12px;height:12px;stroke:var(--text-secondary);fill:none;stroke-width:2.5}
+.modal-body{padding:18px 22px 22px}
+.form-group{margin-bottom:14px}
+.form-label{font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;display:block}
+.form-input{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Mono',monospace;background:var(--surface);outline:none;transition:border-color .15s}
+.form-input:focus{border-color:#999}
+.form-hint{font-size:11px;color:var(--text-muted);margin-top:4px}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+
+/* Access denied */
+.access-denied{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;padding:48px 32px}
+.access-denied.show{display:flex}
+.access-denied-icon{width:56px;height:56px;border-radius:14px;background:var(--red-bg);border:1px solid var(--red-border);display:flex;align-items:center;justify-content:center;margin-bottom:20px}
+.access-denied-icon svg{width:26px;height:26px;stroke:var(--red);fill:none;stroke-width:1.8}
+.access-denied h2{font-size:17px;font-weight:600;color:var(--text-primary);margin-bottom:8px;letter-spacing:-.01em}
+.access-denied p{font-size:13px;color:var(--text-secondary);max-width:320px;line-height:1.7;margin-bottom:20px}
+
+@media(max-width:768px){.main{padding:16px}.header{padding:0 16px}.upload-section{grid-template-columns:1fr}.stats-bar{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loading-overlay">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loading-text">Processing…</div>
+</div>
+
+<!-- AUTH MODAL -->
+<div class="modal-overlay" id="config-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Connect to Supabase</div>
+      <button class="modal-close" onclick="closeModal()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Supabase URL</label><input class="form-input" id="cfg-url" placeholder="https://xxxx.supabase.co" type="text"/></div>
+      <div class="form-group"><label class="form-label">Anon Key</label><input class="form-input" id="cfg-key" placeholder="eyJhbGci…" type="text"/><div class="form-hint">Project Settings → API → anon public key</div></div>
+      <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="cfg-email" type="email"/></div>
+      <div class="form-group"><label class="form-label">Password</label><input class="form-input" id="cfg-pass" type="password"/></div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="doLogin()">Connect & Login</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav class="app-nav">
+  <a class="nav-link" href="../us-payment-tracker/index.html">
+    <svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+    US Payment Tracker
+  </a>
+  <a class="nav-link active" href="#">
+    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    Attendance Tracker
+  </a>
+  <span class="nav-brand">SMA Kristen Petra 5</span>
+</nav>
+
+<header class="header">
+  <div class="header-left">
+    <div class="logo"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+    <div><div class="app-title">Attendance Tracker</div><div class="app-subtitle">SMA Kristen Petra 5 — Guru & Karyawan</div></div>
+  </div>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot ld-hadir"></div>Hadir</div>
+    <div class="legend-item"><div class="legend-dot ld-absen"></div>Tidak Hadir</div>
+    <div class="legend-item"><div class="legend-dot ld-late"></div>Terlambat</div>
+    <div class="legend-item"><div class="legend-dot ld-icc"></div>ICC</div>
+    <div style="width:1px;height:16px;background:var(--border);margin:0 4px"></div>
+    <div style="font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace" id="header-date"></div>
+  </div>
+</header>
+
+<div class="auth-bar">
+  <div class="auth-dot" id="auth-dot"></div>
+  <span id="auth-label" class="auth-label">Not connected</span>
+  <div class="auth-right">
+    <button class="btn btn-secondary" id="btn-connect" onclick="openModal()" style="font-size:11px;padding:4px 10px">Connect to Supabase</button>
+    <button class="btn btn-secondary" id="btn-logout" onclick="doLogout()" style="font-size:11px;padding:4px 10px;display:none">Logout</button>
+  </div>
+</div>
+
+<!-- ACCESS DENIED -->
+<div class="access-denied" id="access-denied">
+  <div class="access-denied-icon">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+  </div>
+  <h2>Access Restricted</h2>
+  <p>The Attendance Tracker is only accessible to Super Admin. Please contact your administrator if you need access.</p>
+  <button class="btn btn-secondary" onclick="doLogout()">
+    <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    Logout
+  </button>
+</div>
+
+<main class="main" id="main">
+
+  <div class="upload-section">
+    <!-- JPAYROLL -->
+    <label class="upload-card" id="card-jpayroll"
+      ondragover="onDrag(event,'jpayroll')" ondragleave="onDragLeave('jpayroll')" ondrop="onDrop(event,'jpayroll')">
+      <input type="file" id="file-jpayroll" accept=".xlsx,.xls" onchange="onFileSelect(event,'jpayroll')"/>
+      <div class="upload-icon" id="icon-jpayroll">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+      </div>
+      <div class="upload-label-text">JPAYROLL Attendance File</div>
+      <div class="upload-hint">Attendance Status by Criteria Report [M1] — .xlsx</div>
+      <div class="upload-filename" id="filename-jpayroll"></div>
+    </label>
+
+    <!-- KETERANGAN -->
+    <label class="upload-card" id="card-ket"
+      ondragover="onDrag(event,'ket')" ondragleave="onDragLeave('ket')" ondrop="onDrop(event,'ket')">
+      <input type="file" id="file-ket" accept=".xlsx,.xls" onchange="onFileSelect(event,'ket')"/>
+      <div class="upload-icon" id="icon-ket">
+        <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      </div>
+      <div class="upload-label-text">Keterangan File <span style="color:var(--text-muted);font-weight:400">(optional)</span></div>
+      <div class="upload-hint">Columns: No. Peg. | Add | Keterangan</div>
+      <div class="upload-filename" id="filename-ket"></div>
+      <span class="template-link" onclick="dlTemplate(event)">↓ Download template</span>
+    </label>
+  </div>
+
+  <!-- ER CONFIG -->
+  <div id="er-config" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;box-shadow:var(--shadow)">
+    <div style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap">Hari Efektif (ER)</div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <label style="font-size:12px;font-weight:600;color:var(--text-secondary);white-space:nowrap">
+        <span style="display:inline-block;width:8px;height:8px;background:#3b82f6;border-radius:2px;margin-right:4px"></span>Guru
+      </label>
+      <input type="number" id="er-guru" min="1" max="31" value="18" style="width:56px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Mono',monospace;font-weight:600;text-align:center;outline:none" oninput="onErChange()"/>
+      <span style="font-size:11px;color:var(--text-muted)">hari</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <label style="font-size:12px;font-weight:600;color:var(--text-secondary);white-space:nowrap">
+        <span style="display:inline-block;width:8px;height:8px;background:#16a34a;border-radius:2px;margin-right:4px"></span>Karyawan
+      </label>
+      <input type="number" id="er-karyawan" min="1" max="31" value="18" style="width:56px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Mono',monospace;font-weight:600;text-align:center;outline:none" oninput="onErChange()"/>
+      <span style="font-size:11px;color:var(--text-muted)">hari</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <label style="font-size:12px;font-weight:600;color:var(--text-secondary);white-space:nowrap">
+        <span style="display:inline-block;width:8px;height:8px;background:#ea580c;border-radius:2px;margin-right:4px"></span>Satpam
+      </label>
+      <input type="number" id="er-satpam" min="1" max="31" value="24" style="width:56px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Mono',monospace;font-weight:600;text-align:center;outline:none" oninput="onErChange()"/>
+      <span style="font-size:11px;color:var(--text-muted)">hari</span>
+    </div>
+    <div style="font-size:11px;color:var(--text-muted);font-style:italic">Guru: Wakasek, Guru, Koor. SLO, Dokter, Pustakawan &nbsp;·&nbsp; Karyawan: Ka. TU, TU, Pesuruh, Teknisi &nbsp;·&nbsp; Satpam: Satpam</div>
+    <div style="font-size:11px;color:var(--text-muted);padding-left:12px;border-left:1px solid var(--border);white-space:nowrap">Periode: <span style="font-family:'DM Mono',monospace;color:var(--text-secondary);font-weight:600" id="er-period-label">—</span></div>
+  </div>
+
+  <!-- PREVIEW BANNER -->
+  <div class="preview-banner" id="preview-banner">
+    <div class="preview-banner-left">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span>Parsed — <strong id="preview-count">0</strong> employees for period <strong id="preview-period">—</strong>.
+        <span id="icc-warn" style="color:var(--orange);display:none"> ⚠ <strong id="icc-count">0</strong> employees have ICC — highlighted orange.</span>
+        Review then save.
+      </span>
+    </div>
+    <div class="preview-banner-actions">
+      <button class="btn btn-secondary" onclick="discardPreview()">Discard</button>
+      <button class="btn btn-green" onclick="saveToSupabase()">
+        <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Save to Supabase
+      </button>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-bar" id="stats-bar" style="display:none">
+    <div class="stat-card"><div class="stat-label">Total Karyawan <span id="s-filter-badge" style="display:none;font-size:9px;background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border);padding:1px 5px;border-radius:8px;font-weight:700;letter-spacing:.04em;margin-left:4px">FILTERED</span></div><div class="stat-value" id="s-total">—</div><div class="stat-sub" id="s-period-sub">—</div></div>
+    <div class="stat-card"><div class="stat-label">Rata-rata Hadir</div><div class="stat-value sv-green" id="s-pct">—</div><div class="stat-sub">TotR vs ER</div></div>
+    <div class="stat-card"><div class="stat-label">Total Tidak Hadir</div><div class="stat-value sv-red" id="s-absen">—</div><div class="stat-sub" id="s-absen-sub">kumulatif hari</div></div>
+    <div class="stat-card"><div class="stat-label">Total Terlambat</div><div class="stat-value sv-yellow" id="s-late">—</div><div class="stat-sub">kumulatif kejadian</div></div>
+    <div class="stat-card" style="border-color:var(--orange-border)"><div class="stat-label" style="color:var(--orange)">ICC — Perlu Klarifikasi</div><div class="stat-value sv-orange" id="s-icc">—</div><div class="stat-sub">karyawan dengan ICC &gt; 0</div></div>
+    <div class="stat-card" style="border-color:var(--red-border)"><div class="stat-label" style="color:var(--red)">Perhatian Khusus</div><div class="stat-value sv-red" id="s-alert">—</div><div class="stat-sub">absen ≥1 atau terlambat ≥3</div></div>
+  </div>
+
+  <!-- CONTROLS -->
+  <div id="main-controls" style="display:none">
+    <div class="controls-row">
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('rekap')" id="tab-rekap">Per Karyawan</button>
+        <button class="tab-btn" onclick="switchTab('unit')" id="tab-unit">Per Unit</button>
+        <button class="tab-btn" onclick="switchTab('alert')" id="tab-alert">⚠ Perhatian Khusus</button>
+        <button class="tab-btn" onclick="switchTab('icc')" id="tab-icc">🟠 ICC Klarifikasi</button>
+      </div>
+      <div class="period-nav">
+        <button class="mnav-btn" onclick="shiftPeriod(-1)"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
+        <span class="period-nav-label" id="period-label">—</span>
+        <button class="mnav-btn" onclick="shiftPeriod(1)"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></button>
+        <button class="mnav-latest" onclick="goLatest()">Latest</button>
+      </div>
+    </div>
+    <div class="controls" id="filter-bar">
+      <div class="search-wrap">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input class="search-input" id="search" type="text" placeholder="Search employee…" oninput="render()"/>
+      </div>
+      <select class="fsel" id="f-unit" onchange="render()"><option value="">All Units</option></select>
+      <select class="fsel" id="f-stat" onchange="render()">
+        <option value="">All Stat.</option>
+        <option>GT</option><option>GK</option><option>KT</option><option>PT</option>
+      </select>
+      <select class="fsel" id="f-status" onchange="render()">
+        <option value="">All Status</option>
+        <option value="icc">Has ICC</option>
+        <option value="alert">Perhatian Khusus</option>
+        <option value="clean">Normal</option>
+      </select>
+      <div class="controls-right">
+        <button class="btn btn-secondary" onclick="exportXL()">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-wrapper">
+    <div class="state-empty" id="empty-state">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <h3>No attendance data yet</h3>
+      <p>Upload the JPAYROLL file to get started. The Keterangan file is optional but adds Add adjustments and notes. Connect to Supabase to save and load historical periods.</p>
+    </div>
+    <div class="table-scroll" id="table-scroll" style="display:none">
+      <table><thead id="tbl-head"></thead><tbody id="tbl-body"></tbody></table>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────────────────────
+let sbUrl=localStorage.getItem('att_sb_url')||'', sbKey=localStorage.getItem('att_sb_key')||'', sbToken=localStorage.getItem('att_sb_token')||'';
+let currentUser=null, currentRole=null;
+let allPeriods=[], activePeriodIdx=0, dbData={}, periodConfigs={};
+let previewData=null, previewMeta=null;
+let parsedJpayroll=null, parsedKet=null;
+let activeTab='rekap';
+
+document.getElementById('header-date').textContent=new Date().toLocaleDateString('id-ID',{weekday:'short',day:'numeric',month:'long',year:'numeric'});
+(async()=>{ if(sbToken&&sbUrl&&sbKey) await restoreSession(); })();
+
+// ── HELPERS ────────────────────────────────────────────────────────────────────
+const $=id=>document.getElementById(id);
+function showLoad(m){ $('loading-text').textContent=m||'…'; $('loading-overlay').classList.add('show'); }
+function hideLoad(){ $('loading-overlay').classList.remove('show'); }
+function toast(msg,t=''){ const el=$('toast'); el.textContent=msg; el.className='toast show '+t; setTimeout(()=>el.className='toast',3200); }
+function makePeriodLabel(s,e){
+  if(!s||!e) return '—';
+  const M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const [,sm,sy]=s.split('/'); const [,em,ey]=e.split('/');
+  return sy===ey ? M[+sm-1]+'-'+M[+em-1]+' '+ey : M[+sm-1]+' '+sy+'-'+M[+em-1]+' '+ey;
+}
+function periodKey(endDate){ if(!endDate) return null; const [,m,y]=endDate.split('/'); return y+'/'+m.padStart(2,'0'); }
+function curRows(){ return dbData[allPeriods[activePeriodIdx]]||[]; }
+
+// ── TEMPLATE ───────────────────────────────────────────────────────────────────
+function dlTemplate(e){
+  e.preventDefault(); e.stopPropagation();
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet([
+    ['No. Peg.','Add','Izin','Sakit','Cuti','Keterangan'],
+    ['199307005',0,0,0,1,'Cuti Mantu(1)'],
+    ['199512004',4,0,0,0,'Longshift(4)'],
+    ['201407019',0,0,5,0,'Opname(5)']
+  ]);
+  ws['!cols']=[{wch:14},{wch:6},{wch:6},{wch:6},{wch:6},{wch:30}];
+  XLSX.utils.book_append_sheet(wb,ws,'Keterangan');
+  XLSX.writeFile(wb,'keterangan_template.xlsx');
+}
+
+// ── FILE HANDLING ──────────────────────────────────────────────────────────────
+function onDrag(e,t){ e.preventDefault(); $('card-'+t).classList.add('dragover'); }
+function onDragLeave(t){ $('card-'+t).classList.remove('dragover'); }
+function onDrop(e,t){ e.preventDefault(); onDragLeave(t); const f=e.dataTransfer.files[0]; if(f) processFile(f,t); }
+function onFileSelect(e,t){ const f=e.target.files[0]; if(f) processFile(f,t); }
+
+function processFile(file,type){
+  showLoad('Parsing '+file.name+'…');
+  setTimeout(()=>{
+    const r=new FileReader();
+    r.onload=ev=>{
+      try{ const wb=XLSX.read(ev.target.result,{type:'binary',cellDates:false}); type==='jpayroll'?parseJpayroll(wb,file.name):parseKet(wb,file.name); }
+      catch(err){ hideLoad(); toast('Parse error: '+err.message,'t-error'); }
+    };
+    r.readAsBinaryString(file);
+  },60);
+}
+
+// ── PARSE JPAYROLL ─────────────────────────────────────────────────────────────
+function parseJpayroll(wb,filename){
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+
+  let startDate='',endDate='',effKaryawan=18,effGuru=18;
+  for(let i=0;i<10;i++){
+    const row=rows[i];
+    for(let c=0;c<row.length;c++){
+      const v=String(row[c]||'').trim();
+      if(/start.date/i.test(v)&&row[c+2]) startDate=String(row[c+2]).replace(/[\s:]/g,'').trim();
+      if(/end.date/i.test(v)&&row[c+2])   endDate  =String(row[c+2]).replace(/[\s:]/g,'').trim();
+      if(/hari.efektif.karyawan/i.test(v)){ for(let k=c+1;k<c+5;k++){ const n=parseInt(row[k]); if(!isNaN(n)&&n>0){effKaryawan=n;break;} } }
+      if(/hari.efektif.guru/i.test(v)){     for(let k=c+1;k<c+5;k++){ const n=parseInt(row[k]); if(!isNaN(n)&&n>0){effGuru=n;break;} } }
+    }
+  }
+
+  const pKey=periodKey(endDate)||'0000/00';
+  const pLabel=makePeriodLabel(startDate,endDate);
+
+  // Find header row
+  let hRow=0;
+  for(let i=0;i<14;i++){ const s=rows[i].join(' ').toLowerCase(); if(s.includes('employee id')&&s.includes('attendance status')){ hRow=i; break; } }
+
+  // Parse daily rows (cols B=1, C=2, D=3, E=4, F=5)
+  const empMap={};
+  let lastId='',lastName='',lastOrg='';
+  for(let i=hRow+1;i<rows.length;i++){
+    const row=rows[i];
+    const rawId   =String(row[1]||'').trim().replace(/[^0-9]/g,'');
+    const rawName =String(row[2]||'').trim();
+    const rawOrg  =String(row[3]||'').trim();
+    const rawDate =String(row[4]||'').trim();
+    const rawStat =String(row[5]||'').trim().toUpperCase();
+
+    // When a new employee ID appears, update carry-forward state immediately
+    if(rawId){ lastId=rawId; if(rawName) lastName=rawName; if(rawOrg) lastOrg=rawOrg; }
+
+    const empId=lastId; if(!empId) continue;
+    const empName=lastName, empOrg=lastOrg;
+
+    if(!rawDate||!rawStat) continue;
+    const codes=rawStat.split(',').map(s=>s.trim()).filter(Boolean);
+    // Pure WS only = weekend off, skip
+    if(codes.length===1&&codes[0]==='WS') continue;
+
+    if(!empMap[empId]) empMap[empId]={id:empId,name:empName,org:empOrg,days:[]};
+    else{
+      // Update name/org if we now have better data (first row of this employee)
+      if(empName&&!empMap[empId].name) empMap[empId].name=empName;
+      if(empOrg &&!empMap[empId].org)  empMap[empId].org =empOrg;
+    }
+    empMap[empId].days.push(codes);
+  }
+
+  // Second pass: fill any still-missing names from right-side summary (col AS=44=Nama)
+  for(let i=hRow+1;i<rows.length;i++){
+    const row=rows[i];
+    const rId  =String(row[43]||'').trim().replace(/[^0-9]/g,'');
+    const rName=String(row[44]||'').trim();
+    if(rId&&empMap[rId]&&rName&&!empMap[rId].name) empMap[rId].name=rName;
+  }
+
+  // Tally per employee
+  const employees={};
+  Object.values(empMap).forEach(emp=>{
+    let hadir_r=0,tidak_hadir=0,terlambat=0,icc=0,er=0;
+    emp.days.forEach(codes=>{
+      const hasPRS=codes.includes('PRS'), hasICC=codes.includes('ICC'), hasABS=codes.includes('ABS');
+      if(hasABS)           tidak_hadir++;
+      else if(hasICC)      icc++;           // ICC without valid PRS = not counted
+      else if(hasPRS){
+        hadir_r++;
+        if(codes.includes('LT')) terlambat++;
+        if(codes.includes('ER')) er++;
+      }
+    });
+    employees[emp.id]={ id:emp.id, name:emp.name, org:emp.org, stat:'', eff_days:effKaryawan, _effGuru:effGuru, hadir_r, tidak_hadir, terlambat, icc, er };
+  });
+
+  // Read right-side summary: AR(43)=No.Peg, AS(44)=Nama, AT(45)=Stat
+  // Use this as fallback for missing names AND to set stat/eff_days
+  for(let i=hRow+1;i<rows.length;i++){
+    const row=rows[i];
+    const rId  =String(row[43]||'').trim().replace(/[^0-9]/g,'');
+    const rName=String(row[44]||'').trim();
+    const rStat=String(row[45]||'').trim().toUpperCase();
+    if(!rId||!employees[rId]) continue;
+    if(rName&&!employees[rId].name) employees[rId].name=rName;
+    if(/^(GT|GK|KT|PT)$/.test(rStat)){
+      employees[rId].stat=rStat;
+      employees[rId].eff_days=(rStat==='PT')?24:(rStat==='GT'?effGuru:effKaryawan);
+    }
+  }
+
+  parsedJpayroll={ meta:{startDate,endDate,pKey,pLabel,effGuru,effKaryawan}, employees };
+  markCard('jpayroll',filename,Object.keys(employees).length+' employees');
+  hideLoad(); toast('✓ JPAYROLL parsed — '+Object.keys(employees).length+' employees','t-success');
+  tryMerge();
+}
+
+// ── PARSE KETERANGAN ───────────────────────────────────────────────────────────
+function parseKet(wb,filename){
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+  let hRow=0;
+  for(let i=0;i<5;i++){ const s=rows[i].join(' ').toLowerCase(); if(s.includes('peg')||s.includes('add')||s.includes('ket')){ hRow=i; break; } }
+  const H=rows[hRow].map(h=>String(h).trim().toLowerCase());
+  const iPeg=H.findIndex(h=>h.includes('peg')||h.includes('id'));
+  const iAdd=H.findIndex(h=>h.includes('add'));
+  const iIzin=H.findIndex(h=>h.includes('izin'));
+  const iSakit=H.findIndex(h=>h.includes('sakit'));
+  const iCuti=H.findIndex(h=>h.includes('cuti'));
+  const iKet=H.findIndex(h=>h.includes('ket'));
+  const result={};
+  for(let i=hRow+1;i<rows.length;i++){
+    const row=rows[i];
+    const peg=String(row[iPeg>=0?iPeg:0]||'').trim().replace(/[^0-9]/g,'');
+    if(!peg) continue;
+    result[peg]={
+      add:   iAdd>=0  ? parseInt(row[iAdd])||0   : 0,
+      izin:  iIzin>=0 ? parseInt(row[iIzin])||0  : 0,
+      sakit: iSakit>=0? parseInt(row[iSakit])||0 : 0,
+      cuti:  iCuti>=0 ? parseInt(row[iCuti])||0   : 0,
+      keterangan: iKet>=0 ? String(row[iKet]||'').trim() : ''
+    };
+  }
+  parsedKet=result;
+  markCard('ket',filename,Object.keys(result).length+' entries');
+  hideLoad(); toast('✓ Keterangan parsed — '+Object.keys(result).length+' entries','t-success');
+  tryMerge();
+}
+
+// ── UNIT & ER CONFIG ──────────────────────────────────────────────────────────
+function unitGroup(org){
+  const s=(org||'').toLowerCase();
+  if(/wakasek/.test(s)) return 0;
+  if(/guru|wali.kelas|koordinator.slo/.test(s)) return 1;
+  if(/kepala.tata.usaha|tata.usaha|dokter|suster|pustakawan/.test(s)) return 2;
+  if(/pesuruh/.test(s)) return 3;
+  if(/satpam/.test(s)) return 4;
+  return 5;
+}
+function erGroup(org){
+  const s=(org||'').toLowerCase();
+  if(/satpam/.test(s)) return 'satpam';
+  if(/kepala.tata.usaha|tata.usaha|pesuruh|teknisi/.test(s)) return 'karyawan';
+  return 'guru';
+}
+function getER(org){
+  const g=erGroup(org);
+  if(g==='satpam') return parseInt($('er-satpam').value)||24;
+  if(g==='karyawan') return parseInt($('er-karyawan').value)||18;
+  return parseInt($('er-guru').value)||18;
+}
+function sortRows(rows){
+  return [...rows].sort((a,b)=>{
+    const ga=unitGroup(a.org), gb=unitGroup(b.org);
+    if(ga!==gb) return ga-gb;
+    return (a.employee_name||'').localeCompare(b.employee_name||'');
+  });
+}
+function loadErForPeriod(pKey){
+  const cfg=periodConfigs[pKey];
+  if(cfg){
+    $('er-guru').value=cfg.er_guru;
+    $('er-karyawan').value=cfg.er_karyawan;
+    $('er-satpam').value=cfg.er_satpam;
+    if(dbData[pKey]) dbData[pKey].forEach(r=>{ r.eff_days=getER(r.org); });
+  }
+}
+function onErChange(){
+  if(!allPeriods.length) return;
+  if(previewData) previewData.forEach(r=>{ r.eff_days=getER(r.org); });
+  const pKey=allPeriods[activePeriodIdx];
+  if(dbData[pKey]) dbData[pKey].forEach(r=>{ r.eff_days=getER(r.org); });
+  updateStats(); render();
+}
+
+// ── MERGE ──────────────────────────────────────────────────────────────────────
+function tryMerge(){
+  if(!parsedJpayroll) return;
+  const {meta,employees}=parsedJpayroll;
+  const ket=parsedKet||{};
+
+  const summaries=Object.values(employees).map(emp=>{
+    const k=ket[emp.id]||{add:0,izin:0,sakit:0,cuti:0,keterangan:''};
+    const add=k.add||0;
+    return {
+      employee_id:emp.id, employee_name:emp.name, org:emp.org, stat:emp.stat,
+      period:meta.pKey, start_date:meta.startDate, end_date:meta.endDate, period_label:meta.pLabel,
+      eff_days:emp.eff_days, hadir_r:emp.hadir_r, hadir_add:add, hadir_totr:emp.hadir_r+add,
+      tidak_hadir:emp.tidak_hadir, terlambat:emp.terlambat, icc:emp.icc, er:emp.er,
+      izin:k.izin||0, sakit:k.sakit||0, cuti:k.cuti||0, keterangan:k.keterangan||''
+    };
+  }).sort((a,b)=>(a.org+a.employee_name).localeCompare(b.org+b.employee_name));
+
+  previewData=summaries; previewMeta=meta;
+  dbData[meta.pKey]=summaries;
+  if(!allPeriods.includes(meta.pKey)) allPeriods.push(meta.pKey);
+  allPeriods.sort();
+  activePeriodIdx=allPeriods.indexOf(meta.pKey);
+  buildUnitFilter();
+
+  const iccN=summaries.filter(r=>r.icc>0).length;
+  $('preview-count').textContent=summaries.length;
+  $('preview-period').textContent=meta.pLabel;
+  $('icc-count').textContent=iccN;
+  $('icc-warn').style.display=iccN>0?'inline':'none';
+  $('preview-banner').classList.add('show');
+
+  showDataUI();
+  toast('✓ Merged — '+summaries.length+' employees ready','t-success');
+}
+
+// ── SAVE ───────────────────────────────────────────────────────────────────────
+async function saveToSupabase(){
+  if(!previewData){ toast('Nothing to save','t-error'); return; }
+  if(!sbToken){ toast('Connect to Supabase first','t-error'); openModal(); return; }
+  if(currentRole!=='super_admin'&&currentRole!=='admin'){ toast('Permission denied','t-error'); return; }
+  showLoad('Saving to Supabase…');
+  try{
+    const pKey=previewMeta.pKey;
+    // Upsert employees
+    const eRes=await sbFetch('/rest/v1/employees',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates'},body:JSON.stringify(previewData.map(r=>({id:r.employee_id,name:r.employee_name,org:r.org,stat:r.stat})))});
+    if(!eRes.ok) throw new Error(JSON.stringify(await eRes.json()));
+    // Save ER config for this period
+    const erCfg={period:pKey,er_guru:parseInt($('er-guru').value)||18,er_karyawan:parseInt($('er-karyawan').value)||18,er_satpam:parseInt($('er-satpam').value)||24};
+    periodConfigs[pKey]=erCfg;
+    await sbFetch('/rest/v1/period_config',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates'},body:JSON.stringify([erCfg])});
+    // Delete existing period
+    await sbFetch(`/rest/v1/attendance_summary?period=eq.${pKey}`,{method:'DELETE'});
+    // Insert
+    const sRes=await sbFetch('/rest/v1/attendance_summary',{method:'POST',body:JSON.stringify(previewData.map(r=>({
+      employee_id:r.employee_id, period:r.period, start_date:r.start_date, end_date:r.end_date, period_label:r.period_label,
+      eff_days:r.eff_days, hadir_r:r.hadir_r, hadir_add:r.hadir_add, hadir_totr:r.hadir_totr,
+      tidak_hadir:r.tidak_hadir, terlambat:r.terlambat, icc:r.icc, er:r.er,
+      izin:r.izin||0, sakit:r.sakit||0, cuti:r.cuti||0, keterangan:r.keterangan
+    })))});
+    if(!sRes.ok) throw new Error(JSON.stringify(await sRes.json()));
+    previewData=null; previewMeta=null; parsedJpayroll=null; parsedKet=null;
+    $('preview-banner').classList.remove('show');
+    resetCards();
+    hideLoad(); toast('✓ Saved!','t-success');
+  }catch(e){ hideLoad(); toast('Save error: '+e.message,'t-error'); }
+}
+
+function discardPreview(){
+  if(!previewMeta) return;
+  delete dbData[previewMeta.pKey];
+  allPeriods=allPeriods.filter(p=>p!==previewMeta.pKey);
+  previewData=null; previewMeta=null; parsedJpayroll=null; parsedKet=null;
+  $('preview-banner').classList.remove('show');
+  resetCards();
+  allPeriods.length?(activePeriodIdx=allPeriods.length-1,buildUnitFilter(),showDataUI()):resetUI();
+}
+
+function markCard(type,filename,info){
+  const c=$('card-'+type); c.classList.add('loaded');
+  $('filename-'+type).textContent=filename;
+  let b=c.querySelector('.upload-badge');
+  if(!b){b=document.createElement('div');b.className='upload-badge';c.appendChild(b);}
+  b.textContent=info;
+  $('icon-'+type).innerHTML=`<svg viewBox="0 0 24 24" style="stroke:#16a34a;fill:none;stroke-width:2.5"><polyline points="20 6 9 17 4 12"/></svg>`;
+}
+function resetCards(){
+  const icons={jpayroll:`<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>`,
+    ket:`<svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`};
+  ['jpayroll','ket'].forEach(t=>{
+    const c=$('card-'+t); c.classList.remove('loaded');
+    $('filename-'+t).textContent='';
+    const b=c.querySelector('.upload-badge'); if(b) b.remove();
+    $('icon-'+t).innerHTML=icons[t];
+    $('file-'+t).value='';
+  });
+}
+
+// ── AUTH ───────────────────────────────────────────────────────────────────────
+function openModal(){ $('cfg-url').value=sbUrl; $('cfg-key').value=sbKey; $('cfg-email').value=''; $('cfg-pass').value=''; $('config-modal').classList.add('show'); }
+function closeModal(){ $('config-modal').classList.remove('show'); }
+
+async function doLogin(){
+  const url=$('cfg-url').value.trim().replace(/\/+$/,''), key=$('cfg-key').value.trim(), email=$('cfg-email').value.trim(), pass=$('cfg-pass').value;
+  if(!url||!key||!email||!pass){ toast('Fill all fields','t-error'); return; }
+  showLoad('Connecting…');
+  try{
+    const res=await fetch(`${url}/auth/v1/token?grant_type=password`,{method:'POST',headers:{'Content-Type':'application/json','apikey':key},body:JSON.stringify({email,password:pass})});
+    const data=await res.json();
+    if(!res.ok) throw new Error(data.error_description||'Login failed');
+    sbUrl=url; sbKey=key; sbToken=data.access_token;
+    localStorage.setItem('att_sb_url',sbUrl); localStorage.setItem('att_sb_key',sbKey); localStorage.setItem('att_sb_token',sbToken);
+    await fetchRole(data.user.id,email);
+    closeModal(); hideLoad(); toast('✓ Connected','t-success');
+    if(currentRole==='super_admin') await loadDB();
+  }catch(e){ hideLoad(); toast('Error: '+e.message,'t-error'); }
+}
+
+async function fetchRole(uid,email){
+  try{ const res=await sbFetch(`/rest/v1/user_roles?select=role,full_name&id=eq.${uid}&limit=1`); const d=await res.json(); if(d&&d[0]){currentRole=d[0].role;currentUser=d[0].full_name||email;}else{currentRole='user';currentUser=email;} }
+  catch(e){ currentRole='user'; currentUser=email; }
+  updateAuthBar();
+  // Gate: only super_admin can use this app
+  if(currentRole!=='super_admin'){
+    $('main').style.display='none';
+    $('access-denied').classList.add('show');
+    return false;
+  }
+  $('main').style.display='block';
+  $('access-denied').classList.remove('show');
+  return true;
+}
+
+async function restoreSession(){
+  try{ const res=await sbFetch('/auth/v1/user'); if(!res.ok) throw new Error(); const d=await res.json(); await fetchRole(d.id,d.email); if(currentRole==='super_admin') await loadDB(); }
+  catch(e){ sbToken=''; localStorage.removeItem('att_sb_token'); updateAuthBar(); }
+}
+
+function doLogout(){ sbToken=''; currentUser=null; currentRole=null; localStorage.removeItem('att_sb_token'); updateAuthBar(); dbData={}; allPeriods=[]; resetUI(); toast('Logged out'); }
+
+function updateAuthBar(){
+  const dot=$('auth-dot'), lbl=$('auth-label');
+  if(sbToken&&currentUser){
+    dot.classList.add('on');
+    lbl.innerHTML=`<span class="auth-user">${currentUser}</span>&nbsp;<span class="auth-role">${currentRole||'user'}</span>`;
+    $('btn-connect').style.display='none'; $('btn-logout').style.display='';
+  } else {
+    dot.classList.remove('on'); lbl.textContent='Not connected';
+    $('btn-connect').style.display=''; $('btn-logout').style.display='none';
+  }
+}
+
+async function sbFetch(path,opts={}){
+  return fetch(path.startsWith('http')?path:sbUrl+path,{...opts,headers:{'apikey':sbKey,'Authorization':'Bearer '+sbToken,'Content-Type':'application/json','Prefer':'return=representation',...(opts.headers||{})}});
+}
+
+async function loadDB(){
+  if(!sbToken) return;
+  showLoad('Loading data…');
+  try{
+    // Fetch period ER configs
+    const cfgRes=await sbFetch('/rest/v1/period_config?select=*');
+    const cfgList=cfgRes.ok?await cfgRes.json():[];
+    periodConfigs={};
+    if(Array.isArray(cfgList)) cfgList.forEach(r=>{ periodConfigs[r.period]={er_guru:r.er_guru||18,er_karyawan:r.er_karyawan||18,er_satpam:r.er_satpam||24}; });
+
+    // Fetch employees lookup table for name/org fallback
+    const empRes=await sbFetch('/rest/v1/employees?select=id,name,org,stat');
+    const empList=empRes.ok?await empRes.json():[];
+    const empLookup={};
+    if(Array.isArray(empList)) empList.forEach(e=>{ empLookup[e.id]={name:e.name,org:e.org,stat:e.stat}; });
+
+    let all=[],from=0,chunk=1000;
+    while(true){ const res=await sbFetch(`/rest/v1/attendance_summary?select=*&order=period.asc,employee_id.asc&limit=${chunk}&offset=${from}`); const d=await res.json(); if(!Array.isArray(d)||!d.length) break; all=all.concat(d); if(d.length<chunk) break; from+=chunk; }
+
+    // Merge employee name/org from lookup for rows missing them
+    all.forEach(r=>{
+      const emp=empLookup[r.employee_id];
+      if(emp){
+        if(!r.employee_name||r.employee_name==='undefined') r.employee_name=emp.name||r.employee_id;
+        if(!r.org) r.org=emp.org||'';
+        if(!r.stat) r.stat=emp.stat||'';
+      }
+      if(!r.employee_name||r.employee_name==='undefined') r.employee_name=r.employee_id;
+    });
+
+    dbData={};
+    all.forEach(r=>{ if(!dbData[r.period])dbData[r.period]=[]; dbData[r.period].push(r); });
+    // Apply saved ER per period then sort
+    Object.keys(dbData).forEach(p=>{
+      const cfg=periodConfigs[p];
+      if(cfg) dbData[p].forEach(r=>{
+        if(erGroup(r.org)==='satpam') r.eff_days=cfg.er_satpam;
+        else if(erGroup(r.org)==='karyawan') r.eff_days=cfg.er_karyawan;
+        else r.eff_days=cfg.er_guru;
+      });
+      dbData[p]=sortRows(dbData[p]);
+    });
+    allPeriods=Object.keys(dbData).sort();
+    buildUnitFilter();
+    allPeriods.length?(activePeriodIdx=allPeriods.length-1,showDataUI()):resetUI();
+    hideLoad(); toast('✓ Data loaded','t-success');
+  }catch(e){ hideLoad(); toast('Load error: '+e.message,'t-error'); }
+}
+
+// ── UI ─────────────────────────────────────────────────────────────────────────
+function resetUI(){ $('stats-bar').style.display='none'; $('main-controls').style.display='none'; $('empty-state').style.display='flex'; $('table-scroll').style.display='none'; }
+function showDataUI(){ $('stats-bar').style.display='grid'; $('main-controls').style.display='block'; $('empty-state').style.display='none'; $('table-scroll').style.display='block'; loadErForPeriod(allPeriods[activePeriodIdx]); updatePeriodLabel(); updateStats(); render(); }
+
+function buildUnitFilter(){
+  const units=new Set(); Object.values(dbData).forEach(rows=>rows.forEach(r=>{if(r.org) units.add(r.org);}));
+  const sel=$('f-unit'); sel.innerHTML='<option value="">All Units</option>';
+  Array.from(units).sort().forEach(u=>{ const o=document.createElement('option'); o.value=u; o.textContent=u; sel.appendChild(o); });
+}
+
+function updatePeriodLabel(){ const lbl=dbData[allPeriods[activePeriodIdx]]?.[0]?.period_label||allPeriods[activePeriodIdx]||'—'; $('period-label').textContent=lbl; $('s-period-sub').textContent=lbl; const el=$('er-period-label'); if(el) el.textContent=lbl; }
+function shiftPeriod(d){ activePeriodIdx=Math.max(0,Math.min(allPeriods.length-1,activePeriodIdx+d)); loadErForPeriod(allPeriods[activePeriodIdx]); updatePeriodLabel(); updateStats(); render(); }
+function goLatest(){ activePeriodIdx=allPeriods.length-1; loadErForPeriod(allPeriods[activePeriodIdx]); updatePeriodLabel(); updateStats(); render(); }
+
+function updateStats(){
+  const all=curRows(); if(!all.length) return;
+  const rows=getFiltered();
+  const isFiltered=rows.length!==all.length;
+  $('s-filter-badge').style.display=isFiltered?'inline':'none';
+  const tot=rows.length, totH=rows.reduce((a,r)=>a+r.hadir_totr,0), totE=rows.reduce((a,r)=>a+r.eff_days,0);
+  $('s-total').textContent=tot;
+  $('s-pct').textContent=totE?Math.round(totH/totE*100)+'%':'—';
+  $('s-absen').textContent=rows.reduce((a,r)=>a+r.tidak_hadir,0);
+  const totIzin=rows.reduce((a,r)=>a+(r.izin||0),0), totSakit=rows.reduce((a,r)=>a+(r.sakit||0),0), totCuti=rows.reduce((a,r)=>a+(r.cuti||0),0);
+  $('s-absen-sub').textContent=(totIzin+totSakit+totCuti>0)?`I:${totIzin} S:${totSakit} C:${totCuti}`:'kumulatif hari';
+  $('s-late').textContent=rows.reduce((a,r)=>a+r.terlambat,0);
+  $('s-icc').textContent=rows.filter(r=>r.icc>0).length;
+  $('s-alert').textContent=rows.filter(r=>r.tidak_hadir>=1||r.terlambat>=3).length;
+}
+
+function switchTab(tab){
+  activeTab=tab;
+  ['rekap','unit','alert','icc'].forEach(t=>$('tab-'+t).classList.toggle('active',t===tab));
+  $('filter-bar').style.display=tab==='unit'?'none':'flex';
+  render();
+}
+function render(){ if(activeTab==='rekap') renderRekap(); else if(activeTab==='unit') renderUnit(); else if(activeTab==='alert') renderAlert(); else renderICC(); updateStats(); }
+
+function getFiltered(force){
+  const s=$('search').value.toLowerCase(), u=$('f-unit').value, st=$('f-stat').value, status=force||$('f-status').value;
+  return curRows().filter(r=>{
+    if(s&&!r.employee_name.toLowerCase().includes(s)&&!r.employee_id.includes(s)) return false;
+    if(u&&r.org!==u) return false;
+    if(st&&r.stat!==st) return false;
+    if(status==='icc')   return r.icc>0;
+    if(status==='alert') return r.tidak_hadir>=1||r.terlambat>=3;
+    if(status==='clean') return r.icc===0&&r.tidak_hadir===0&&r.terlambat<3;
+    return true;
+  });
+}
+
+// ── RENDER REKAP ───────────────────────────────────────────────────────────────
+function renderRekap(){
+  $('tbl-head').innerHTML=`<tr>
+    <th class="col-name">Karyawan</th><th>Unit</th><th class="num">Stat.</th>
+    <th class="num">ER</th><th class="num">R</th><th class="num">Add</th>
+    <th class="num h-totr">TotR</th>
+    <th class="num" style="color:var(--blue)">Izin</th>
+    <th class="num" style="color:var(--red)">Sakit</th>
+    <th class="num" style="color:var(--purple)">Cuti</th>
+    <th class="num h-icc">ICC</th><th class="num">Terlambat</th>
+    <th>Keterangan</th><th>Status</th></tr>`;
+  const rows=getFiltered();
+  if(!rows.length){ emptyRow(14); return; }
+  $('tbl-body').innerHTML=rows.map(r=>{
+    const hasICC=r.icc>0, isAlert=r.tidak_hadir>=1||r.terlambat>=3;
+    const cls=hasICC?'row-icc':isAlert?'row-alert':'';
+    const pct=r.eff_days?Math.round(r.hadir_totr/r.eff_days*100):0;
+    const tClr=r.hadir_totr>=r.eff_days?'nv-green':r.hadir_totr>=r.eff_days-2?'nv-yellow':'nv-red';
+    const addH=r.hadir_add!==0?`<span class="nv ${r.hadir_add>0?'nv-green':'nv-red'}">${r.hadir_add>0?'+':''}${r.hadir_add}</span>`:`<span class="nv nv-muted">—</span>`;
+    const izin=r.izin||0, sakit=r.sakit||0, cuti=r.cuti||0;
+    let status=hasICC?`<span class="icc-chip">⚠ ICC:${r.icc}</span> `:''
+      +(isAlert?`<span class="badge b-red">Perhatian</span> `:'')
+      +(!hasICC&&!isAlert?`<span class="badge b-green">✓ Normal</span>`:'')
+      +(r.terlambat>0&&!isAlert?`<span class="badge b-yellow" style="margin-left:2px">LT:${r.terlambat}</span>`:'');
+    return `<tr class="${cls}">
+      <td class="stickyCol"><div class="emp-cell"><span class="emp-name">${r.employee_name}</span><span class="emp-id">${r.employee_id}</span></div></td>
+      <td><span class="emp-org">${r.org||'—'}</span></td>
+      <td class="num"><span class="badge b-neutral">${r.stat||'—'}</span></td>
+      <td class="num"><span class="nv">${r.eff_days}</span></td>
+      <td class="num"><span class="nv">${r.hadir_r}</span></td>
+      <td class="num">${addH}</td>
+      <td class="num"><span class="nv ${tClr}" title="${pct}% hadir">${r.hadir_totr}</span></td>
+      <td class="num"><span class="nv ${izin>0?'nv-blue':'nv-muted'}">${izin||'—'}</span></td>
+      <td class="num"><span class="nv ${sakit>0?'nv-red':'nv-muted'}">${sakit||'—'}</span></td>
+      <td class="num"><span class="nv ${cuti>0?'nv-purple':'nv-muted'}">${cuti||'—'}</span></td>
+      <td class="num"><span class="nv ${hasICC?'nv-orange':'nv-muted'}">${r.icc||'—'}</span></td>
+      <td class="num"><span class="nv ${r.terlambat>=3?'nv-red':r.terlambat>0?'nv-yellow':'nv-muted'}">${r.terlambat||'—'}</span></td>
+      <td>${r.keterangan?`<span class="ket-chip">${r.keterangan}</span>`:'<span class="nv nv-muted">—</span>'}</td>
+      <td style="white-space:nowrap">${status}</td></tr>`;
+  }).join('');
+}
+
+// ── RENDER UNIT ────────────────────────────────────────────────────────────────
+function renderUnit(){
+  $('tbl-head').innerHTML=`<tr><th>Unit / Jabatan</th><th class="num">Karyawan</th><th class="num">ER</th><th class="num">R</th><th class="num h-totr">TotR</th><th class="num" style="color:var(--blue)">Izin</th><th class="num" style="color:var(--red)">Sakit</th><th class="num" style="color:var(--purple)">Cuti</th><th class="num h-icc">ICC</th><th class="num">Terlambat</th><th class="num">% Hadir</th></tr>`;
+  const map={};
+  curRows().forEach(r=>{ const u=r.org||'(no unit)'; if(!map[u]) map[u]={org:u,count:0,eff:0,r:0,totr:0,izin:0,sakit:0,cuti:0,icc:0,late:0}; const m=map[u]; m.count++;m.eff+=r.eff_days;m.r+=r.hadir_r;m.totr+=r.hadir_totr;m.izin+=(r.izin||0);m.sakit+=(r.sakit||0);m.cuti+=(r.cuti||0);m.icc+=r.icc;m.late+=r.terlambat; });
+  $('tbl-body').innerHTML=Object.values(map).sort((a,b)=>unitGroup(a.org)-unitGroup(b.org)).map(u=>{
+    const pct=u.eff?Math.round(u.totr/u.eff*100):0, pClr=pct>=90?'nv-green':pct>=75?'nv-yellow':'nv-red';
+    return `<tr><td style="font-weight:500">${u.org}</td><td class="num"><span class="nv">${u.count}</span></td><td class="num"><span class="nv">${u.eff}</span></td><td class="num"><span class="nv">${u.r}</span></td><td class="num"><span class="nv nv-blue">${u.totr}</span></td><td class="num"><span class="nv ${u.izin>0?'nv-blue':'nv-muted'}">${u.izin||'—'}</span></td><td class="num"><span class="nv ${u.sakit>0?'nv-red':'nv-muted'}">${u.sakit||'—'}</span></td><td class="num"><span class="nv ${u.cuti>0?'nv-purple':'nv-muted'}">${u.cuti||'—'}</span></td><td class="num"><span class="nv ${u.icc>0?'nv-orange':'nv-muted'}">${u.icc||'—'}</span></td><td class="num"><span class="nv ${u.late>0?'nv-yellow':'nv-muted'}">${u.late||'—'}</span></td><td class="num"><span class="nv ${pClr}">${pct}%</span></td></tr>`;
+  }).join('');
+}
+
+// ── RENDER ALERT ───────────────────────────────────────────────────────────────
+function renderAlert(){
+  $('tbl-head').innerHTML=`<tr><th class="col-name">Karyawan</th><th>Unit</th><th class="num">Stat.</th><th class="num h-totr">TotR</th><th class="num">ER</th><th class="num">Tdk Hadir</th><th class="num">Terlambat</th><th>Keterangan</th><th>Status</th></tr>`;
+  const rows=getFiltered().filter(r=>r.tidak_hadir>=1||r.terlambat>=3).sort((a,b)=>b.tidak_hadir-a.tidak_hadir||b.terlambat-a.terlambat);
+  if(!rows.length){ $('tbl-body').innerHTML=`<tr><td colspan="9" style="text-align:center;padding:48px;color:var(--text-muted);font-size:13px">✓ Tidak ada karyawan yang membutuhkan perhatian khusus</td></tr>`; return; }
+  $('tbl-body').innerHTML=rows.map(r=>{
+    const tags=(r.tidak_hadir>=1?`<span class="badge b-red" style="margin:1px">Absen: ${r.tidak_hadir}</span>`:'')+(r.terlambat>=3?`<span class="badge b-yellow" style="margin:1px">LT: ${r.terlambat}×</span>`:'');
+    return `<tr class="row-alert"><td class="stickyCol"><div class="emp-cell"><span class="emp-name">${r.employee_name}</span><span class="emp-id">${r.employee_id}</span></div></td><td><span class="emp-org">${r.org||'—'}</span></td><td class="num"><span class="badge b-neutral">${r.stat||'—'}</span></td><td class="num"><span class="nv nv-blue">${r.hadir_totr}</span></td><td class="num"><span class="nv">${r.eff_days}</span></td><td class="num"><span class="nv nv-red">${r.tidak_hadir}</span></td><td class="num"><span class="nv ${r.terlambat>=3?'nv-red':'nv-yellow'}">${r.terlambat||'—'}</span></td><td>${r.keterangan?`<span class="ket-chip">${r.keterangan}</span>`:'—'}</td><td style="white-space:nowrap">${tags}</td></tr>`;
+  }).join('');
+}
+
+// ── RENDER ICC ─────────────────────────────────────────────────────────────────
+function renderICC(){
+  $('tbl-head').innerHTML=`<tr><th class="col-name">Karyawan</th><th>Unit</th><th class="num">Stat.</th><th class="num">R</th><th class="num h-icc">ICC</th><th class="num h-totr">TotR</th><th class="num">ER</th><th>Keterangan</th><th>Catatan</th></tr>`;
+  const rows=getFiltered().filter(r=>r.icc>0).sort((a,b)=>b.icc-a.icc);
+  if(!rows.length){ $('tbl-body').innerHTML=`<tr><td colspan="9" style="text-align:center;padding:48px;color:var(--text-muted);font-size:13px">✓ Tidak ada ICC yang perlu diklarifikasi</td></tr>`; return; }
+  $('tbl-body').innerHTML=rows.map(r=>`<tr class="row-icc">
+    <td class="stickyCol"><div class="emp-cell"><span class="emp-name">${r.employee_name}</span><span class="emp-id">${r.employee_id}</span></div></td>
+    <td><span class="emp-org">${r.org||'—'}</span></td>
+    <td class="num"><span class="badge b-neutral">${r.stat||'—'}</span></td>
+    <td class="num"><span class="nv">${r.hadir_r}</span></td>
+    <td class="num"><span class="icc-chip">⚠ ${r.icc}</span></td>
+    <td class="num"><span class="nv nv-blue">${r.hadir_totr}</span></td>
+    <td class="num"><span class="nv">${r.eff_days}</span></td>
+    <td>${r.keterangan?`<span class="ket-chip">${r.keterangan}</span>`:'—'}</td>
+    <td style="font-size:11px;color:var(--orange)">${r.icc} hari finger tidak lengkap — minta klarifikasi ke karyawan</td>
+  </tr>`).join('');
+}
+
+function emptyRow(n){ $('tbl-body').innerHTML=`<tr><td colspan="${n}" style="text-align:center;padding:48px;color:var(--text-muted);font-size:13px">No employees match the filters</td></tr>`; }
+
+// ── EXPORT ─────────────────────────────────────────────────────────────────────
+function exportXL(){
+  const rows=getFiltered(); if(!rows.length){ toast('No data','t-error'); return; }
+  showLoad('Generating…');
+  setTimeout(()=>{
+    const pKey=allPeriods[activePeriodIdx], lbl=dbData[pKey]?.[0]?.period_label||pKey;
+    const H=['Employee ID','Nama','ER','R','Add','TotR','Izin','Sakit','Cuti','ICC','Terlambat','Keterangan','Status'];
+    const toR=arr=>arr.map(r=>[r.employee_id,r.employee_name,r.eff_days,r.hadir_r,r.hadir_add,r.hadir_totr,r.izin||0,r.sakit||0,r.cuti||0,r.icc,r.terlambat,r.keterangan,r.icc>0?'ICC Perlu Klarifikasi':(r.tidak_hadir>=1||r.terlambat>=3)?'Perhatian Khusus':'Normal']);
+    const wb=XLSX.utils.book_new();
+    const ws=XLSX.utils.aoa_to_sheet([H,...toR(rows)]); ws['!cols']=[{wch:14},{wch:30},{wch:5},{wch:5},{wch:5},{wch:6},{wch:6},{wch:7},{wch:6},{wch:5},{wch:10},{wch:28},{wch:22}];
+    XLSX.utils.book_append_sheet(wb,ws,'Rekap '+lbl);
+    const iccR=rows.filter(r=>r.icc>0);
+    if(iccR.length){ const ws2=XLSX.utils.aoa_to_sheet([H,...toR(iccR)]); ws2['!cols']=ws['!cols']; XLSX.utils.book_append_sheet(wb,ws2,'ICC Klarifikasi'); }
+    const alR=rows.filter(r=>r.tidak_hadir>=1||r.terlambat>=3);
+    if(alR.length){ const ws3=XLSX.utils.aoa_to_sheet([H,...toR(alR)]); ws3['!cols']=ws['!cols']; XLSX.utils.book_append_sheet(wb,ws3,'Perhatian Khusus'); }
+    XLSX.writeFile(wb,`Rekap_Kehadiran_${lbl.replace(/\s/g,'_')}.xlsx`);
+    hideLoad(); toast('✓ Exported!','t-success');
+  },60);
+}
+
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeModal(); });
+</script>
+</body>
+</html>
