@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png"/>
 <title>Attendance Tracker — SMA Kristen Petra 5</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -23,6 +24,15 @@
 }
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text-primary);min-height:100vh;font-size:14px;line-height:1.5}
 
+/* NAV */
+.app-nav{background:#1a1a18;padding:0 32px;display:flex;align-items:center;height:36px;font-size:12px}
+.nav-link{color:rgba(255,255,255,.5);text-decoration:none;padding:0 14px;height:36px;display:flex;align-items:center;gap:6px;font-weight:500;transition:color .15s;letter-spacing:.01em;border-right:1px solid rgba(255,255,255,.08)}
+.nav-link:first-child{border-left:1px solid rgba(255,255,255,.08)}
+.nav-link.active{color:white;background:rgba(255,255,255,.07)}
+.nav-link:hover:not(.active){color:rgba(255,255,255,.8)}
+.nav-link svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2}
+.nav-brand{color:rgba(255,255,255,.25);font-size:11px;margin-left:auto;font-family:'DM Mono',monospace;letter-spacing:.04em}
+
 /* HEADER */
 .header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 32px;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:200}
 .header-left{display:flex;align-items:center;gap:12px}
@@ -30,22 +40,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text-prim
 .logo svg{width:16px;height:16px;stroke:white;fill:none;stroke-width:2}
 .app-title{font-size:15px;font-weight:600;letter-spacing:-.02em}
 .app-subtitle{font-size:11px;color:var(--text-muted)}
-.header-center{display:flex;align-items:center;gap:4px}
-.nav-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:var(--radius-sm);font-size:12px;font-weight:600;cursor:pointer;border:1px solid transparent;background:transparent;color:var(--text-secondary);transition:all .15s;font-family:inherit;text-decoration:none}
-.nav-btn:hover{background:var(--bg);color:var(--text-primary);border-color:var(--border)}
-.nav-btn.active{background:var(--accent);color:white}
-.nav-btn svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2}
-.header-right{display:flex;align-items:center;gap:10px}
-.user-chip{display:flex;align-items:center;gap:6px;padding:4px 10px;background:var(--bg);border:1px solid var(--border);border-radius:20px}
-.user-chip-role{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:1px 6px;border-radius:10px}
-.role-super{background:#fef3c7;color:#92400e}
-.role-admin{background:#dbeafe;color:#1e40af}
-.role-user{background:#f0fdf4;color:#166534}
-.user-chip-name{font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace}
-.btn-logout{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:var(--radius-sm);font-size:11px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text-secondary);transition:all .15s;font-family:inherit}
-.btn-logout:hover{background:var(--red-bg);color:var(--red);border-color:var(--red-border)}
-.btn-logout svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2}
-.legend{display:flex;align-items:center;gap:10px;font-size:11px;color:var(--text-secondary)}
+.legend{display:flex;align-items:center;gap:14px;font-size:11px;color:var(--text-secondary)}
 .legend-item{display:flex;align-items:center;gap:5px}
 .legend-dot{width:8px;height:8px;border-radius:2px}
 .ld-hadir{background:#22c55e}.ld-absen{background:#dc2626}.ld-late{background:#f59e0b}.ld-icc{background:#ea580c}
@@ -172,7 +167,14 @@ td.num{text-align:center}
 .toast.show{transform:translateY(0);opacity:1}
 .toast.t-success{background:#16a34a}.toast.t-error{background:#dc2626}
 
-
+/* Auth */
+.auth-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:8px 32px;display:flex;align-items:center;gap:10px;font-size:12px}
+.auth-dot{width:7px;height:7px;border-radius:50%;background:#dc2626;flex-shrink:0}
+.auth-dot.on{background:#16a34a}
+.auth-label{color:var(--text-secondary);font-weight:500}
+.auth-user{color:var(--text-primary);font-weight:600;font-family:'DM Mono',monospace}
+.auth-role{display:inline-flex;padding:1px 8px;border-radius:10px;font-size:10px;font-weight:600;background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border)}
+.auth-right{margin-left:auto;display:flex;gap:8px}
 
 /* Modal */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:600;display:none;align-items:center;justify-content:center}
@@ -230,43 +232,42 @@ td.num{text-align:center}
   </div>
 </div>
 
+<!-- NAV -->
+<nav class="app-nav">
+  <a class="nav-link" href="../us-payment-tracker/index.html">
+    <svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+    US Payment Tracker
+  </a>
+  <a class="nav-link active" href="#">
+    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    Attendance Tracker
+  </a>
+  <span class="nav-brand">SMA Kristen Petra 5</span>
+</nav>
+
 <header class="header">
   <div class="header-left">
     <div class="logo"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
     <div><div class="app-title">Attendance Tracker</div><div class="app-subtitle">SMA Kristen Petra 5 — Guru & Karyawan</div></div>
   </div>
-  <div class="header-center">
-    <a class="nav-btn" href="../us-payment-tracker/index.html">
-      <svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-      US Payment
-    </a>
-    <a class="nav-btn active" href="#">
-      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-      Attendance
-    </a>
-  </div>
-  <div class="header-right">
-    <div class="legend">
-      <div class="legend-item"><div class="legend-dot ld-hadir"></div>Hadir</div>
-      <div class="legend-item"><div class="legend-dot ld-absen"></div>Tidak Hadir</div>
-      <div class="legend-item"><div class="legend-dot ld-late"></div>Terlambat</div>
-      <div class="legend-item"><div class="legend-dot ld-icc"></div>ICC</div>
-      <div style="width:1px;height:16px;background:var(--border);margin:0 2px"></div>
-      <div style="font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace" id="header-date"></div>
-    </div>
-    <div class="user-chip" id="user-chip" style="display:none">
-      <span class="user-chip-role" id="chip-role"></span>
-      <span class="user-chip-name" id="chip-name"></span>
-    </div>
-    <button class="btn-logout" id="btn-logout" onclick="doLogout()" style="display:none">
-      <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-      Logout
-    </button>
-    <button class="btn btn-secondary" id="btn-connect" onclick="openModal()" style="font-size:11px;padding:5px 10px">
-      Connect
-    </button>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot ld-hadir"></div>Hadir</div>
+    <div class="legend-item"><div class="legend-dot ld-absen"></div>Tidak Hadir</div>
+    <div class="legend-item"><div class="legend-dot ld-late"></div>Terlambat</div>
+    <div class="legend-item"><div class="legend-dot ld-icc"></div>ICC</div>
+    <div style="width:1px;height:16px;background:var(--border);margin:0 4px"></div>
+    <div style="font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace" id="header-date"></div>
   </div>
 </header>
+
+<div class="auth-bar">
+  <div class="auth-dot" id="auth-dot"></div>
+  <span id="auth-label" class="auth-label">Not connected</span>
+  <div class="auth-right">
+    <button class="btn btn-secondary" id="btn-connect" onclick="openModal()" style="font-size:11px;padding:4px 10px">Connect to Supabase</button>
+    <button class="btn btn-secondary" id="btn-logout" onclick="doLogout()" style="font-size:11px;padding:4px 10px;display:none">Logout</button>
+  </div>
+</div>
 
 <!-- ACCESS DENIED -->
 <div class="access-denied" id="access-denied">
@@ -799,19 +800,14 @@ async function restoreSession(){
 function doLogout(){ sbToken=''; currentUser=null; currentRole=null; localStorage.removeItem('att_sb_token'); updateAuthBar(); dbData={}; allPeriods=[]; resetUI(); toast('Logged out'); }
 
 function updateAuthBar(){
+  const dot=$('auth-dot'), lbl=$('auth-label');
   if(sbToken&&currentUser){
-    const roleClass=currentRole==='super_admin'?'role-super':currentRole==='admin'?'role-admin':'role-user';
-    const roleLabel=currentRole==='super_admin'?'Super':currentRole==='admin'?'Admin':'User';
-    $('chip-role').className='user-chip-role '+roleClass;
-    $('chip-role').textContent=roleLabel;
-    $('chip-name').textContent=currentUser;
-    $('user-chip').style.display='flex';
-    $('btn-logout').style.display='inline-flex';
-    $('btn-connect').style.display='none';
+    dot.classList.add('on');
+    lbl.innerHTML=`<span class="auth-user">${currentUser}</span>&nbsp;<span class="auth-role">${currentRole||'user'}</span>`;
+    $('btn-connect').style.display='none'; $('btn-logout').style.display='';
   } else {
-    $('user-chip').style.display='none';
-    $('btn-logout').style.display='none';
-    $('btn-connect').style.display='';
+    dot.classList.remove('on'); lbl.textContent='Not connected';
+    $('btn-connect').style.display=''; $('btn-logout').style.display='none';
   }
 }
 
