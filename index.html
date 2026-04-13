@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png"/>
 <title>Attendance Tracker — SMA Kristen Petra 5</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -153,7 +152,6 @@ td.num{text-align:center}
 .b-yellow{background:var(--yellow-bg);color:#d97706;border:1px solid var(--yellow-border)}
 .b-orange{background:var(--orange-bg);color:#ea580c;border:1px solid var(--orange-border)}
 .b-neutral{background:var(--bg);color:var(--text-muted);border:1px solid var(--border)}
-.b-orange{background:var(--orange-bg);color:var(--orange);border:1px solid var(--orange-border)}
 .icc-chip{display:inline-flex;align-items:center;gap:3px;background:var(--orange-bg);border:1px solid var(--orange-border);color:var(--orange);font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px}
 .ket-chip{display:inline-block;background:#f0f0ec;color:var(--text-secondary);font-size:10px;padding:2px 7px;border-radius:4px;font-family:'DM Mono',monospace;white-space:nowrap}
 
@@ -406,18 +404,6 @@ td.num{text-align:center}
         </button>
       </div>
     </div>
-    <!-- PD CUTOFF BAR -->
-    <div id="pd-bar" style="display:none;align-items:center;gap:12px;padding:10px 0 4px;flex-wrap:wrap">
-      <div style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.06em">PD Cutoff</div>
-      <div style="display:flex;align-items:center;gap:6px">
-        <input type="time" id="pd-cutoff-input" value="06:23" step="60"
-          style="padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Mono',monospace;font-weight:600;outline:none;width:110px"
-          oninput="onPdCutoffChange()"/>
-        <span style="font-size:11px;color:var(--text-muted)">finger-in setelah waktu ini = PD</span>
-      </div>
-      <div style="font-size:11px;color:var(--text-muted)">Terlambat &amp; Menit dihitung dari <span style="font-family:'DM Mono',monospace;font-weight:600;color:var(--text-secondary)">06:30</span></div>
-      <div id="pd-summary" style="font-size:11px;color:var(--orange);font-weight:600;margin-left:auto"></div>
-    </div>
   </div>
 
   <div class="table-wrapper">
@@ -438,7 +424,7 @@ td.num{text-align:center}
 // ── STATE ──────────────────────────────────────────────────────────────────────
 let sbUrl=localStorage.getItem('att_sb_url')||'', sbKey=localStorage.getItem('att_sb_key')||'', sbToken=localStorage.getItem('att_sb_token')||'';
 let currentUser=null, currentRole=null;
-let allPeriods=[], activePeriodIdx=0, dbData={}, periodConfigs={}, dailyData={};
+let allPeriods=[], activePeriodIdx=0, dbData={}, periodConfigs={};
 let previewData=null, previewMeta=null;
 let parsedJpayroll=null, parsedKet=null;
 let activeTab='rekap';
@@ -539,28 +525,13 @@ function parseJpayroll(wb,filename){
     // Pure WS only = weekend off, skip
     if(codes.length===1&&codes[0]==='WS') continue;
 
-    // Col V (index 21) = finger-in time, only from row hRow+10 onward
-    const rawTime=(i>=hRow+10)?String(row[21]||'').trim():'';
-    let fingerIn='';
-    if(rawTime){
-      if(/^\d+\.\d+$/.test(rawTime)){
-        // Excel time serial -> HH:MM
-        const mins=Math.round(parseFloat(rawTime)*24*60);
-        fingerIn=String(Math.floor(mins/60)).padStart(2,'0')+':'+String(mins%60).padStart(2,'0');
-      } else if(/^\d{1,2}:\d{2}/.test(rawTime)){
-        const [hh,mm]=rawTime.split(':');
-        fingerIn=hh.padStart(2,'0')+':'+mm.padStart(2,'0');
-      }
-    }
-
-    if(!empMap[empId]) empMap[empId]={id:empId,name:empName,org:empOrg,days:[],daily:[]};
+    if(!empMap[empId]) empMap[empId]={id:empId,name:empName,org:empOrg,days:[]};
     else{
       // Update name/org if we now have better data (first row of this employee)
       if(empName&&!empMap[empId].name) empMap[empId].name=empName;
       if(empOrg &&!empMap[empId].org)  empMap[empId].org =empOrg;
     }
     empMap[empId].days.push(codes);
-    empMap[empId].daily.push({date:rawDate,codes:codes.join(','),finger_in:fingerIn});
   }
 
   // Second pass: fill any still-missing names from right-side summary (col AS=44=Nama)
@@ -573,26 +544,19 @@ function parseJpayroll(wb,filename){
 
   // Tally per employee
   const employees={};
-  function timeToMins(t){ if(!t) return 0; const [h,m]=t.split(':'); return parseInt(h)*60+parseInt(m); }
-  const LATE_CUTOFF=timeToMins('06:30');
-
   Object.values(empMap).forEach(emp=>{
-    let hadir_r=0,tidak_hadir=0,terlambat=0,terlambat_minutes=0,icc=0,er=0;
-    emp.days.forEach((codes,idx)=>{
+    let hadir_r=0,tidak_hadir=0,terlambat=0,icc=0,er=0;
+    emp.days.forEach(codes=>{
       const hasPRS=codes.includes('PRS'), hasICC=codes.includes('ICC'), hasABS=codes.includes('ABS');
       if(hasABS)           tidak_hadir++;
-      else if(hasICC)      icc++;
+      else if(hasICC)      icc++;           // ICC without valid PRS = not counted
       else if(hasPRS){
         hadir_r++;
-        if(codes.includes('LT')){
-          terlambat++;
-          const fi=(emp.daily||[])[idx]?.finger_in;
-          if(fi){ const lateMins=timeToMins(fi)-LATE_CUTOFF; if(lateMins>0) terlambat_minutes+=lateMins; }
-        }
+        if(codes.includes('LT')) terlambat++;
         if(codes.includes('ER')) er++;
       }
     });
-    employees[emp.id]={ id:emp.id, name:emp.name, org:emp.org, stat:'', eff_days:effKaryawan, _effGuru:effGuru, hadir_r, tidak_hadir, terlambat, terlambat_minutes, icc, er, daily:emp.daily||[] };
+    employees[emp.id]={ id:emp.id, name:emp.name, org:emp.org, stat:'', eff_days:effKaryawan, _effGuru:effGuru, hadir_r, tidak_hadir, terlambat, icc, er };
   });
 
   // Read right-side summary: AR(43)=No.Peg, AS(44)=Nama, AT(45)=Stat
@@ -683,7 +647,6 @@ function loadErForPeriod(pKey){
     $('er-guru').value=cfg.er_guru;
     $('er-karyawan').value=cfg.er_karyawan;
     $('er-satpam').value=cfg.er_satpam;
-    const ci=$('pd-cutoff-input'); if(ci) ci.value=cfg.cutoff_time||'';
     if(dbData[pKey]) dbData[pKey].forEach(r=>{ r.eff_days=getER(r.org); });
   }
 }
@@ -707,23 +670,21 @@ function tryMerge(){
     return {
       employee_id:emp.id, employee_name:emp.name, org:emp.org, stat:emp.stat,
       period:meta.pKey, start_date:meta.startDate, end_date:meta.endDate, period_label:meta.pLabel,
-      eff_days:getER(emp.org), hadir_r:emp.hadir_r, hadir_add:add, hadir_totr:emp.hadir_r+add,
-      tidak_hadir:emp.tidak_hadir, terlambat:emp.terlambat, terlambat_minutes:emp.terlambat_minutes||0, icc:emp.icc, er:emp.er,
-      izin:k.izin||0, sakit:k.sakit||0, cuti:k.cuti||0, keterangan:k.keterangan||'',
-      _daily:emp.daily||[]
+      eff_days:emp.eff_days, hadir_r:emp.hadir_r, hadir_add:add, hadir_totr:emp.hadir_r+add,
+      tidak_hadir:emp.tidak_hadir, terlambat:emp.terlambat, icc:emp.icc, er:emp.er,
+      izin:k.izin||0, sakit:k.sakit||0, cuti:k.cuti||0, keterangan:k.keterangan||''
     };
-  });
-  const summaries2=sortRows(summaries);
+  }).sort((a,b)=>(a.org+a.employee_name).localeCompare(b.org+b.employee_name));
 
-  previewData=summaries2; previewMeta=meta;
-  dbData[meta.pKey]=summaries2;
+  previewData=summaries; previewMeta=meta;
+  dbData[meta.pKey]=summaries;
   if(!allPeriods.includes(meta.pKey)) allPeriods.push(meta.pKey);
   allPeriods.sort();
   activePeriodIdx=allPeriods.indexOf(meta.pKey);
   buildUnitFilter();
 
-  const iccN=summaries2.filter(r=>r.icc>0).length;
-  $('preview-count').textContent=summaries2.length;
+  const iccN=summaries.filter(r=>r.icc>0).length;
+  $('preview-count').textContent=summaries.length;
   $('preview-period').textContent=meta.pLabel;
   $('icc-count').textContent=iccN;
   $('icc-warn').style.display=iccN>0?'inline':'none';
@@ -745,8 +706,7 @@ async function saveToSupabase(){
     const eRes=await sbFetch('/rest/v1/employees',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates'},body:JSON.stringify(previewData.map(r=>({id:r.employee_id,name:r.employee_name,org:r.org,stat:r.stat})))});
     if(!eRes.ok) throw new Error(JSON.stringify(await eRes.json()));
     // Save ER config for this period
-    const cutoffVal=$('pd-cutoff-input')?$('pd-cutoff-input').value||'':'';
-    const erCfg={period:pKey,er_guru:parseInt($('er-guru').value)||18,er_karyawan:parseInt($('er-karyawan').value)||18,er_satpam:parseInt($('er-satpam').value)||24,cutoff_time:cutoffVal};
+    const erCfg={period:pKey,er_guru:parseInt($('er-guru').value)||18,er_karyawan:parseInt($('er-karyawan').value)||18,er_satpam:parseInt($('er-satpam').value)||24};
     periodConfigs[pKey]=erCfg;
     await sbFetch('/rest/v1/period_config',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates'},body:JSON.stringify([erCfg])});
     // Delete existing period
@@ -755,19 +715,10 @@ async function saveToSupabase(){
     const sRes=await sbFetch('/rest/v1/attendance_summary',{method:'POST',body:JSON.stringify(previewData.map(r=>({
       employee_id:r.employee_id, period:r.period, start_date:r.start_date, end_date:r.end_date, period_label:r.period_label,
       eff_days:r.eff_days, hadir_r:r.hadir_r, hadir_add:r.hadir_add, hadir_totr:r.hadir_totr,
-      tidak_hadir:r.tidak_hadir, terlambat:r.terlambat, terlambat_minutes:r.terlambat_minutes||0, icc:r.icc, er:r.er,
+      tidak_hadir:r.tidak_hadir, terlambat:r.terlambat, icc:r.icc, er:r.er,
       izin:r.izin||0, sakit:r.sakit||0, cuti:r.cuti||0, keterangan:r.keterangan
     })))});
     if(!sRes.ok) throw new Error(JSON.stringify(await sRes.json()));
-    // Save daily finger-in records for PD cutoff analysis
-    const dailyRows=[];
-    previewData.forEach(r=>{ (r._daily||[]).forEach(d=>{ dailyRows.push({employee_id:r.employee_id,period:pKey,work_date:d.date,finger_in:d.finger_in||null,codes:d.codes||''}); }); });
-    if(dailyRows.length){
-      await sbFetch(`/rest/v1/attendance_daily?period=eq.${pKey}`,{method:'DELETE'});
-      for(let i=0;i<dailyRows.length;i+=500){
-        await sbFetch('/rest/v1/attendance_daily',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates'},body:JSON.stringify(dailyRows.slice(i,i+500))});
-      }
-    }
     previewData=null; previewMeta=null; parsedJpayroll=null; parsedKet=null;
     $('preview-banner').classList.remove('show');
     resetCards();
@@ -871,17 +822,7 @@ async function loadDB(){
     const cfgRes=await sbFetch('/rest/v1/period_config?select=*');
     const cfgList=cfgRes.ok?await cfgRes.json():[];
     periodConfigs={};
-    if(Array.isArray(cfgList)) cfgList.forEach(r=>{ periodConfigs[r.period]={er_guru:r.er_guru||18,er_karyawan:r.er_karyawan||18,er_satpam:r.er_satpam||24,cutoff_time:r.cutoff_time||''}; });
-
-    // Fetch attendance_daily for PD cutoff
-    const dayRes=await sbFetch('/rest/v1/attendance_daily?select=employee_id,period,work_date,finger_in,codes&order=period.asc,employee_id.asc,work_date.asc');
-    const dayList=dayRes.ok?await dayRes.json():[];
-    dailyData={};
-    if(Array.isArray(dayList)) dayList.forEach(d=>{
-      if(!dailyData[d.period]) dailyData[d.period]={};
-      if(!dailyData[d.period][d.employee_id]) dailyData[d.period][d.employee_id]=[];
-      dailyData[d.period][d.employee_id].push(d);
-    });
+    if(Array.isArray(cfgList)) cfgList.forEach(r=>{ periodConfigs[r.period]={er_guru:r.er_guru||18,er_karyawan:r.er_karyawan||18,er_satpam:r.er_satpam||24}; });
 
     // Fetch employees lookup table for name/org fallback
     const empRes=await sbFetch('/rest/v1/employees?select=id,name,org,stat');
@@ -956,7 +897,6 @@ function switchTab(tab){
   activeTab=tab;
   ['rekap','unit','alert','icc'].forEach(t=>$('tab-'+t).classList.toggle('active',t===tab));
   $('filter-bar').style.display=tab==='unit'?'none':'flex';
-  $('pd-bar').style.display=tab==='alert'?'flex':'none';
   render();
 }
 function render(){ if(activeTab==='rekap') renderRekap(); else if(activeTab==='unit') renderUnit(); else if(activeTab==='alert') renderAlert(); else renderICC(); updateStats(); }
@@ -988,7 +928,7 @@ function renderRekap(){
   const rows=getFiltered();
   if(!rows.length){ emptyRow(14); return; }
   $('tbl-body').innerHTML=rows.map(r=>{
-    const hasICC=r.icc>0, isAlert=r.tidak_hadir>=1||r.terlambat>=1;
+    const hasICC=r.icc>0, isAlert=true;
     const cls=hasICC?'row-icc':isAlert?'row-alert':'';
     const pct=r.eff_days?Math.round(r.hadir_totr/r.eff_days*100):0;
     const tClr=r.hadir_totr>=r.eff_days?'nv-green':r.hadir_totr>=r.eff_days-2?'nv-yellow':'nv-red';
@@ -997,7 +937,7 @@ function renderRekap(){
     let status=hasICC?`<span class="icc-chip">⚠ ICC:${r.icc}</span> `:''
       +(isAlert?`<span class="badge b-red">Perhatian</span> `:'')
       +(!hasICC&&!isAlert?`<span class="badge b-green">✓ Normal</span>`:'')
-      +(r.terlambat>0&&!isAlert?`<span class="badge b-yellow" style="margin-left:2px">LT:${r.terlambat}</span>`:'');
+      +(r.terlambat>0?`<span class="badge b-yellow" style="margin-left:2px">LT:${r.terlambat}</span>`:'');
     return `<tr class="${cls}">
       <td class="stickyCol"><div class="emp-cell"><span class="emp-name">${r.employee_name}</span><span class="emp-id">${r.employee_id}</span></div></td>
       <td><span class="emp-org">${r.org||'—'}</span></td>
@@ -1028,59 +968,14 @@ function renderUnit(){
 }
 
 // ── RENDER ALERT ───────────────────────────────────────────────────────────────
-function getPdCount(employeeId){
-  const pKey=allPeriods[activePeriodIdx];
-  const cutoffEl=$('pd-cutoff-input');
-  if(!cutoffEl||!cutoffEl.value) return 0;
-  const cutoff=cutoffEl.value;
-  const emp=(dailyData[pKey]||{})[employeeId]||[];
-  const preview=(previewData||[]).find(r=>r.employee_id===employeeId);
-  const days=emp.length?emp:(preview?._daily||[]).map(d=>({finger_in:d.finger_in,codes:d.codes}));
-  return days.filter(d=>d.finger_in&&d.finger_in>cutoff).length;
-}
-
-function onPdCutoffChange(){
-  const pKey=allPeriods[activePeriodIdx];
-  if(periodConfigs[pKey]) periodConfigs[pKey].cutoff_time=$('pd-cutoff-input').value||'';
-  if(activeTab==='alert') renderAlert();
-}
-
 function renderAlert(){
-  const cutoff=($('pd-cutoff-input')||{}).value||'';
-  const cols=cutoff?9:8;
-  $('tbl-head').innerHTML=`<tr>
-    <th class="col-name">Karyawan</th>
-    <th class="num h-totr">TotR</th>
-    <th class="num">ER</th>
-    <th class="num">Tdk Hadir</th>
-    <th class="num">Terlambat</th>
-    <th class="num" style="color:var(--yellow)">Menit</th>
-    ${cutoff?`<th class="num" style="color:var(--orange)">PD &gt;${cutoff}</th>`:''}
-    <th>Keterangan</th>
-    <th>Status</th></tr>`;
-  const rows=getFiltered().filter(r=>r.tidak_hadir>=1||r.terlambat>=3).sort((a,b)=>b.tidak_hadir-a.tidak_hadir||b.terlambat-a.terlambat);
-  if(!rows.length){ $('tbl-body').innerHTML=`<tr><td colspan="${cols}" style="text-align:center;padding:48px;color:var(--text-muted);font-size:13px">✓ Tidak ada karyawan yang membutuhkan perhatian khusus</td></tr>`; return; }
-  let totalPd=0;
+  $('tbl-head').innerHTML=`<tr><th class="col-name">Karyawan</th><th>Unit</th><th class="num">Stat.</th><th class="num h-totr">TotR</th><th class="num">ER</th><th class="num">Tdk Hadir</th><th class="num">Terlambat</th><th>Keterangan</th><th>Status</th></tr>`;
+  const rows=getFiltered().sort((a,b)=>b.tidak_hadir-a.tidak_hadir||b.terlambat-a.terlambat);
+  if(!rows.length){ $('tbl-body').innerHTML=`<tr><td colspan="9" style="text-align:center;padding:48px;color:var(--text-muted);font-size:13px">✓ Tidak ada karyawan yang membutuhkan perhatian khusus</td></tr>`; return; }
   $('tbl-body').innerHTML=rows.map(r=>{
-    const pdCount=cutoff?getPdCount(r.employee_id):0;
-    totalPd+=pdCount;
-    const menit=r.terlambat_minutes||0;
-    const tags=(r.tidak_hadir>=1?`<span class="badge b-red" style="margin:1px">Absen: ${r.tidak_hadir}</span>`:'')
-      +(r.terlambat>=3?`<span class="badge b-yellow" style="margin:1px">LT: ${r.terlambat}x</span>`:'')
-      +(pdCount>0?`<span class="badge b-orange" style="margin:1px">PD: ${pdCount}</span>`:'');
-    return `<tr class="row-alert">
-      <td class="stickyCol"><div class="emp-cell"><span class="emp-name">${r.employee_name}</span><span class="emp-id">${r.employee_id}</span></div></td>
-      <td class="num"><span class="nv nv-blue">${r.hadir_totr}</span></td>
-      <td class="num"><span class="nv">${r.eff_days}</span></td>
-      <td class="num"><span class="nv nv-red">${r.tidak_hadir||'—'}</span></td>
-      <td class="num"><span class="nv ${r.terlambat>=3?'nv-red':r.terlambat>0?'nv-yellow':'nv-muted'}">${r.terlambat||'—'}</span></td>
-      <td class="num"><span class="nv ${menit>0?'nv-yellow':'nv-muted'}">${menit>0?menit+'m':'—'}</span></td>
-      ${cutoff?`<td class="num"><span class="nv ${pdCount>0?'nv-orange':'nv-muted'}">${pdCount||'—'}</span></td>`:''}
-      <td>${r.keterangan?`<span class="ket-chip">${r.keterangan}</span>`:'—'}</td>
-      <td style="white-space:nowrap">${tags}</td></tr>`;
+    const tags=(r.tidak_hadir>=1?`<span class="badge b-red" style="margin:1px">Absen: ${r.tidak_hadir}</span>`:'')+(r.terlambat>=1?`<span class="badge b-yellow" style="margin:1px">LT: ${r.terlambat}×</span>`:'');
+    return `<tr class="row-alert"><td class="stickyCol"><div class="emp-cell"><span class="emp-name">${r.employee_name}</span><span class="emp-id">${r.employee_id}</span></div></td><td><span class="emp-org">${r.org||'—'}</span></td><td class="num"><span class="badge b-neutral">${r.stat||'—'}</span></td><td class="num"><span class="nv nv-blue">${r.hadir_totr}</span></td><td class="num"><span class="nv">${r.eff_days}</span></td><td class="num"><span class="nv nv-red">${r.tidak_hadir}</span></td><td class="num"><span class="nv ${r.terlambat>=3?'nv-red':'nv-yellow'}">${r.terlambat||'—'}</span></td><td>${r.keterangan?`<span class="ket-chip">${r.keterangan}</span>`:'—'}</td><td style="white-space:nowrap">${tags}</td></tr>`;
   }).join('');
-  const sumEl=$('pd-summary');
-  if(sumEl) sumEl.textContent=cutoff&&totalPd>0?`${totalPd} kejadian PD dari ${rows.length} karyawan`:'';
 }
 
 // ── RENDER ICC ─────────────────────────────────────────────────────────────────
@@ -1110,13 +1005,13 @@ function exportXL(){
   setTimeout(()=>{
     const pKey=allPeriods[activePeriodIdx], lbl=dbData[pKey]?.[0]?.period_label||pKey;
     const H=['Employee ID','Nama','ER','R','Add','TotR','Izin','Sakit','Cuti','ICC','Terlambat','Keterangan','Status'];
-    const toR=arr=>arr.map(r=>[r.employee_id,r.employee_name,r.eff_days,r.hadir_r,r.hadir_add,r.hadir_totr,r.izin||0,r.sakit||0,r.cuti||0,r.icc,r.terlambat,r.keterangan,r.icc>0?'ICC Perlu Klarifikasi':(r.tidak_hadir>=1||r.terlambat>=1)?'Perhatian Khusus':'Normal']);
+    const toR=arr=>arr.map(r=>[r.employee_id,r.employee_name,r.eff_days,r.hadir_r,r.hadir_add,r.hadir_totr,r.izin||0,r.sakit||0,r.cuti||0,r.icc,r.terlambat,r.keterangan,r.icc>0?'ICC Perlu Klarifikasi':'Perhatian Khusus']);
     const wb=XLSX.utils.book_new();
     const ws=XLSX.utils.aoa_to_sheet([H,...toR(rows)]); ws['!cols']=[{wch:14},{wch:30},{wch:5},{wch:5},{wch:5},{wch:6},{wch:6},{wch:7},{wch:6},{wch:5},{wch:10},{wch:28},{wch:22}];
     XLSX.utils.book_append_sheet(wb,ws,'Rekap '+lbl);
     const iccR=rows.filter(r=>r.icc>0);
     if(iccR.length){ const ws2=XLSX.utils.aoa_to_sheet([H,...toR(iccR)]); ws2['!cols']=ws['!cols']; XLSX.utils.book_append_sheet(wb,ws2,'ICC Klarifikasi'); }
-    const alR=rows.filter(r=>r.tidak_hadir>=1||r.terlambat>=3);
+    const alR=rows;
     if(alR.length){ const ws3=XLSX.utils.aoa_to_sheet([H,...toR(alR)]); ws3['!cols']=ws['!cols']; XLSX.utils.book_append_sheet(wb,ws3,'Perhatian Khusus'); }
     XLSX.writeFile(wb,`Rekap_Kehadiran_${lbl.replace(/\s/g,'_')}.xlsx`);
     hideLoad(); toast('✓ Exported!','t-success');
