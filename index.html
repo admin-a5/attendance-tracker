@@ -988,7 +988,7 @@ function renderRekap(){
   const rows=getFiltered();
   if(!rows.length){ emptyRow(14); return; }
   $('tbl-body').innerHTML=rows.map(r=>{
-    const hasICC=r.icc>0, isAlert=r.tidak_hadir>=1||r.terlambat>=3;
+    const hasICC=r.icc>0, isAlert=r.tidak_hadir>=1||r.terlambat>=1;
     const cls=hasICC?'row-icc':isAlert?'row-alert':'';
     const pct=r.eff_days?Math.round(r.hadir_totr/r.eff_days*100):0;
     const tClr=r.hadir_totr>=r.eff_days?'nv-green':r.hadir_totr>=r.eff_days-2?'nv-yellow':'nv-red';
