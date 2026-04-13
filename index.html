@@ -1058,7 +1058,7 @@ function renderAlert(){
     ${cutoff?`<th class="num" style="color:var(--orange)">PD &gt;${cutoff}</th>`:''}
     <th>Keterangan</th>
     <th>Status</th></tr>`;
-  const rows=getFiltered().sort((a,b)=>b.tidak_hadir-a.tidak_hadir||b.terlambat-a.terlambat);
+  const rows=getFiltered().filter(r=>r.terlambat>=1).sort((a,b)=>b.terlambat-a.terlambat);
   if(!rows.length){ $('tbl-body').innerHTML=`<tr><td colspan="${cols}" style="text-align:center;padding:48px;color:var(--text-muted);font-size:13px">✓ Tidak ada karyawan yang membutuhkan perhatian khusus</td></tr>`; return; }
   let totalPd=0;
   $('tbl-body').innerHTML=rows.map(r=>{
@@ -1109,14 +1109,14 @@ function exportXL(){
   showLoad('Generating…');
   setTimeout(()=>{
     const pKey=allPeriods[activePeriodIdx], lbl=dbData[pKey]?.[0]?.period_label||pKey;
-    const H=['Employee ID','Nama','ER','R','Add','TotR','Izin','Sakit','Cuti','ICC','Terlambat','Keterangan','Status'];
-    const toR=arr=>arr.map(r=>[r.employee_id,r.employee_name,r.eff_days,r.hadir_r,r.hadir_add,r.hadir_totr,r.izin||0,r.sakit||0,r.cuti||0,r.icc,r.terlambat,r.keterangan,r.icc>0?'ICC Perlu Klarifikasi':'Perhatian Khusus']);
+    const H=['Employee ID','Nama','ER','R','Add','TotR','Izin','Sakit','Cuti','ICC','Terlambat','Keterangan','PD','Menit Keterlambatan'];
+    const toR=arr=>arr.map(r=>[r.employee_id,r.employee_name,r.eff_days,r.hadir_r,r.hadir_add,r.hadir_totr,r.izin||0,r.sakit||0,r.cuti||0,r.icc,r.terlambat,r.keterangan,getPdCount(r.employee_id),r.terlambat_minutes||0]);
     const wb=XLSX.utils.book_new();
-    const ws=XLSX.utils.aoa_to_sheet([H,...toR(rows)]); ws['!cols']=[{wch:14},{wch:30},{wch:5},{wch:5},{wch:5},{wch:6},{wch:6},{wch:7},{wch:6},{wch:5},{wch:10},{wch:28},{wch:22}];
+    const ws=XLSX.utils.aoa_to_sheet([H,...toR(rows)]); ws['!cols']=[{wch:14},{wch:30},{wch:5},{wch:5},{wch:5},{wch:6},{wch:6},{wch:7},{wch:6},{wch:5},{wch:10},{wch:28},{wch:6},{wch:18}];
     XLSX.utils.book_append_sheet(wb,ws,'Rekap '+lbl);
     const iccR=rows.filter(r=>r.icc>0);
     if(iccR.length){ const ws2=XLSX.utils.aoa_to_sheet([H,...toR(iccR)]); ws2['!cols']=ws['!cols']; XLSX.utils.book_append_sheet(wb,ws2,'ICC Klarifikasi'); }
-    const alR=rows;
+    const alR=rows.filter(r=>r.terlambat>=1);
     if(alR.length){ const ws3=XLSX.utils.aoa_to_sheet([H,...toR(alR)]); ws3['!cols']=ws['!cols']; XLSX.utils.book_append_sheet(wb,ws3,'Perhatian Khusus'); }
     XLSX.writeFile(wb,`Rekap_Kehadiran_${lbl.replace(/\s/g,'_')}.xlsx`);
     hideLoad(); toast('✓ Exported!','t-success');
