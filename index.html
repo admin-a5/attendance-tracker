@@ -1110,7 +1110,7 @@ function exportXL(){
   setTimeout(()=>{
     const pKey=allPeriods[activePeriodIdx], lbl=dbData[pKey]?.[0]?.period_label||pKey;
     const H=['Employee ID','Nama','ER','R','Add','TotR','Izin','Sakit','Cuti','ICC','Terlambat','Keterangan','Status'];
-    const toR=arr=>arr.map(r=>[r.employee_id,r.employee_name,r.eff_days,r.hadir_r,r.hadir_add,r.hadir_totr,r.izin||0,r.sakit||0,r.cuti||0,r.icc,r.terlambat,r.keterangan,r.icc>0?'ICC Perlu Klarifikasi':(r.tidak_hadir>=1||r.terlambat>=3)?'Perhatian Khusus':'Normal']);
+    const toR=arr=>arr.map(r=>[r.employee_id,r.employee_name,r.eff_days,r.hadir_r,r.hadir_add,r.hadir_totr,r.izin||0,r.sakit||0,r.cuti||0,r.icc,r.terlambat,r.keterangan,r.icc>0?'ICC Perlu Klarifikasi':(r.tidak_hadir>=1||r.terlambat>=1)?'Perhatian Khusus':'Normal']);
     const wb=XLSX.utils.book_new();
     const ws=XLSX.utils.aoa_to_sheet([H,...toR(rows)]); ws['!cols']=[{wch:14},{wch:30},{wch:5},{wch:5},{wch:5},{wch:6},{wch:6},{wch:7},{wch:6},{wch:5},{wch:10},{wch:28},{wch:22}];
     XLSX.utils.book_append_sheet(wb,ws,'Rekap '+lbl);
