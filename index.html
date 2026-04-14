@@ -756,7 +756,8 @@ async function saveToSupabase(){
       employee_id:r.employee_id, period:r.period, start_date:r.start_date, end_date:r.end_date, period_label:r.period_label,
       eff_days:r.eff_days, hadir_r:r.hadir_r, hadir_add:r.hadir_add, hadir_totr:r.hadir_totr,
       tidak_hadir:r.tidak_hadir, terlambat:r.terlambat, terlambat_minutes:r.terlambat_minutes||0, icc:r.icc, er:r.er,
-      izin:r.izin||0, sakit:r.sakit||0, cuti:r.cuti||0, keterangan:r.keterangan
+      izin:r.izin||0, sakit:r.sakit||0, cuti:r.cuti||0, keterangan:r.keterangan,
+      pd_count:cutoffVal?(r._daily||[]).filter(d=>d.finger_in&&d.finger_in>cutoffVal).length:0
     })))});
     if(!sRes.ok) throw new Error(JSON.stringify(await sRes.json()));
     // Save daily finger-in records for PD cutoff analysis
@@ -988,7 +989,7 @@ function renderRekap(){
   const rows=getFiltered();
   if(!rows.length){ emptyRow(14); return; }
   $('tbl-body').innerHTML=rows.map(r=>{
-    const hasICC=r.icc>0, isAlert=true;
+    const hasICC=r.icc>0, isAlert=r.tidak_hadir>=1||r.terlambat>=1;
     const cls=hasICC?'row-icc':isAlert?'row-alert':'';
     const pct=r.eff_days?Math.round(r.hadir_totr/r.eff_days*100):0;
     const tClr=r.hadir_totr>=r.eff_days?'nv-green':r.hadir_totr>=r.eff_days-2?'nv-yellow':'nv-red';
@@ -1062,7 +1063,7 @@ function renderAlert(){
   if(!rows.length){ $('tbl-body').innerHTML=`<tr><td colspan="${cols}" style="text-align:center;padding:48px;color:var(--text-muted);font-size:13px">✓ Tidak ada karyawan yang membutuhkan perhatian khusus</td></tr>`; return; }
   let totalPd=0;
   $('tbl-body').innerHTML=rows.map(r=>{
-    const pdCount=cutoff?getPdCount(r.employee_id):0;
+    const pdCount=cutoff?r.pd_count||getPdCount(r.employee_id):0;
     totalPd+=pdCount;
     const menit=r.terlambat_minutes||0;
     const tags=(r.tidak_hadir>=1?`<span class="badge b-red" style="margin:1px">Absen: ${r.tidak_hadir}</span>`:'')
@@ -1110,7 +1111,7 @@ function exportXL(){
   setTimeout(()=>{
     const pKey=allPeriods[activePeriodIdx], lbl=dbData[pKey]?.[0]?.period_label||pKey;
     const H=['Employee ID','Nama','ER','R','Add','TotR','Izin','Sakit','Cuti','ICC','Terlambat','Keterangan','PD','Menit Keterlambatan'];
-    const toR=arr=>arr.map(r=>[r.employee_id,r.employee_name,r.eff_days,r.hadir_r,r.hadir_add,r.hadir_totr,r.izin||0,r.sakit||0,r.cuti||0,r.icc,r.terlambat,r.keterangan,getPdCount(r.employee_id),r.terlambat_minutes||0]);
+    const toR=arr=>arr.map(r=>[r.employee_id,r.employee_name,r.eff_days,r.hadir_r,r.hadir_add,r.hadir_totr,r.izin||0,r.sakit||0,r.cuti||0,r.icc,r.terlambat,r.keterangan,r.pd_count||0,r.terlambat_minutes||0]);
     const wb=XLSX.utils.book_new();
     const ws=XLSX.utils.aoa_to_sheet([H,...toR(rows)]); ws['!cols']=[{wch:14},{wch:30},{wch:5},{wch:5},{wch:5},{wch:6},{wch:6},{wch:7},{wch:6},{wch:5},{wch:10},{wch:28},{wch:6},{wch:18}];
     XLSX.utils.book_append_sheet(wb,ws,'Rekap '+lbl);
